@@ -214,7 +214,7 @@ Example config.json:
 
 ---
 
-🚀 Quick Start
+### 🚀 Quick Start
 
 Basic Usage
 
@@ -260,7 +260,7 @@ zynox -d /sdcard/Documents "create notes.txt"
 
 ---
 
-📚 Usage Guide
+### 📚 Usage Guide
 
 Command Structure
 
@@ -304,7 +304,7 @@ DeepSeek
 
 ---
 
-💡 Examples
+### 💡 Examples
 
 Web Development Projects
 
@@ -373,7 +373,7 @@ zynox "create a Python game with main.py, player.py, enemy.py, settings.py, and 
 
 ---
 
-📖 Commands Reference
+### 📖 Commands Reference
 
 Configuration Commands
 
@@ -428,7 +428,7 @@ zynox -p openai -d ./api "create a REST API with Flask"
 
 ---
 
-🔍 Troubleshooting
+### 🔍 Troubleshooting
 
 Common Issues and Solutions
 
@@ -525,7 +525,7 @@ python ~/ZynoxAI/zynox.py "test" 2>&1
 
 ---
 
-🔑 API Keys
+### 🔑 API Keys
 
 Where to Get API Keys
 
@@ -571,7 +571,7 @@ File Descriptions
 
 ---
 
-🤝 Contributing
+### 🤝 Contributing
 
 How to Contribute
 
