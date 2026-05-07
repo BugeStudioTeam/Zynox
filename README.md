@@ -1,6 +1,3 @@
-以下是超级详细的 GitHub README.md 文件，代码格式：
-
-```markdown
 # 🚀 ZynoxAI - AI-Powered File & Folder Creation Tool
 
 <div align="center">
