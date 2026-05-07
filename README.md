@@ -30,8 +30,6 @@
 - [API Keys](#-api-keys)
 - [Project Structure](#-project-structure)
 - [Contributing](#-contributing)
-- [License](#-license)
-- [Acknowledgments](#-acknowledgments)
 
 ---
 
