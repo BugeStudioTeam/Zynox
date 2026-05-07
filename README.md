@@ -9,7 +9,7 @@
 
 **Create files and folders using natural language with GPT, Grok, and DeepSeek AI**
 
-[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Usage Guide](#-usage-guide) • [Examples](#-examples) • [FAQ](#-faq)
+[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Usage Guide](#-usage-guide) • [Examples](#-examples)
 
 </div>
 
