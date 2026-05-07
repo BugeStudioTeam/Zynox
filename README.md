@@ -147,7 +147,7 @@ zynox --help
 
 ---
 
-🔧 Configuration
+### 🔧 Configuration
 
 Setting API Keys
 
