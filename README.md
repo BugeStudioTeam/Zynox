@@ -116,7 +116,7 @@ mkdir -p ~/ZynoxAI
 cd ~/ZynoxAI
 
 # Download the script
-curl -o zynox.py https://github.com/BugeStudioTeam/Zynox/main/zynox.py
+curl -o zynox.py https://github.com/BugeStudioTeam/Zynox/blob/main/ZynoxAI/zynox.py
 # OR create manually (copy the code from this repo)
 nano zynox.py
 ```
