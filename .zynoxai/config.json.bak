@@ -1,6 +1,6 @@
 {
   "api_keys": {
-    "plz input your AI's name (example: deepseek)": "Your API"
+    "AI like (example: deepseek)": "Your API"
   },
   "default_provider": "deepseek/grok/...",
   "default_model": "deepseek-chat/..."
