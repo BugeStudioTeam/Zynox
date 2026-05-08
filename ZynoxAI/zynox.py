@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 ZynoxAI - AI-powered file/folder creation tool
-Supports: GPT, Grok, DeepSeek
+Supports: OpenAI, Gemini, Grok, DeepSeek
 """
 
 import os
@@ -23,6 +23,10 @@ API_ENDPOINTS = {
     "openai": {
         "url": "https://api.openai.com/v1/chat/completions",
         "models": ["gpt-3.5-turbo", "gpt-4o-mini", "gpt-4o"]
+    },
+    "gemini": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+        "models": ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"]
     },
     "grok": {
         "url": "https://api.x.ai/v1/chat/completions",
@@ -46,7 +50,7 @@ def print_logo():
 {Fore.CYAN}║{Fore.YELLOW}   ╚══════╝   ╚═╝   ╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝{Fore.CYAN}                ║
 {Fore.CYAN}╠═══════════════════════════════════════════════════════════════╣
 {Fore.CYAN}║{Fore.GREEN}         AI-Powered File & Folder Creation Tool{Fore.CYAN}                ║
-{Fore.CYAN}║{Fore.MAGENTA}              GPT • Grok • DeepSeek{Fore.CYAN}                            ║
+{Fore.CYAN}║{Fore.MAGENTA}          ChatGPT • Gemini • Grok • DeepSeek{Fore.CYAN}                   ║
 {Fore.CYAN}╚═══════════════════════════════════════════════════════════════╝{Style.RESET_ALL}
 """
     print(logo)
@@ -122,7 +126,7 @@ Rules:
 
 User request: {user_input}
 
-Response format zynox:
+Response format examples:
 - Single file: {{"type": "file", "path": "hello.py", "content": "print('Hello World')\\n"}}
 - Single folder: {{"type": "folder", "path": "my_project"}}
 - Multiple: {{"actions": [{{"type": "folder", "path": "src"}}, {{"type": "file", "path": "src/main.py", "content": "# Main file"}}]}}
@@ -144,12 +148,27 @@ Generate JSON response:"""
         
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}"
         }
         
         # Build payload based on provider
-        if provider == "deepseek":
-            # DeepSeek specific payload (no stream parameter)
+        if provider == "gemini":
+            # Gemini specific payload
+            url = endpoint_config["url"].replace("{model}", model)
+            headers["x-goog-api-key"] = api_key
+            payload = {
+                "contents": [{
+                    "parts": [{"text": prompt}]
+                }],
+                "generationConfig": {
+                    "temperature": 0.1,
+                    "maxOutputTokens": 8192
+                }
+            }
+            timeout_seconds = 120
+            
+        elif provider == "deepseek":
+            # DeepSeek specific payload
+            headers["Authorization"] = f"Bearer {api_key}"
             payload = {
                 "model": model,
                 "messages": [
@@ -159,8 +178,11 @@ Generate JSON response:"""
                 "temperature": 0.1,
                 "max_tokens": 16000
             }
+            timeout_seconds = 180
+            
         elif provider == "grok":
             # Grok/xAI specific payload
+            headers["Authorization"] = f"Bearer {api_key}"
             payload = {
                 "model": model,
                 "messages": [
@@ -170,8 +192,10 @@ Generate JSON response:"""
                 "temperature": 0.3,
                 "max_tokens": 8192
             }
+            timeout_seconds = 60
         else:
             # OpenAI standard payload
+            headers["Authorization"] = f"Bearer {api_key}"
             payload = {
                 "model": model,
                 "messages": [
@@ -181,10 +205,15 @@ Generate JSON response:"""
                 "temperature": 0.3,
                 "max_tokens": 8192
             }
+            timeout_seconds = 60
         
         try:
             print(f"{Fore.CYAN}→ Calling {provider.upper()} API (model: {model})...")
-            response = requests.post(endpoint_config["url"], headers=headers, json=payload, timeout=180)
+            
+            if provider == "gemini":
+                response = requests.post(url, headers=headers, json=payload, timeout=timeout_seconds)
+            else:
+                response = requests.post(endpoint_config["url"], headers=headers, json=payload, timeout=timeout_seconds)
             
             # Check for HTTP errors
             if response.status_code != 200:
@@ -193,7 +222,12 @@ Generate JSON response:"""
                 return None
             
             result = response.json()
-            ai_response = result["choices"][0]["message"]["content"]
+            
+            # Extract response based on provider
+            if provider == "gemini":
+                ai_response = result["candidates"][0]["content"]["parts"][0]["text"]
+            else:
+                ai_response = result["choices"][0]["message"]["content"]
             
             # Clean up response (remove markdown code blocks if present)
             ai_response = re.sub(r'```json\s*', '', ai_response)
@@ -312,7 +346,8 @@ def main():
         epilog="""
 Examples:
   zynox set-key openai sk-xxx
-  zynox set-default deepseek
+  zynox set-key gemini YOUR_GEMINI_KEY
+  zynox set-default gemini
   zynox "create a python file called main.py with hello world"
   zynox -p grok "make a folder called my_project"
   zynox -d ./workspace "create an index.html file"
@@ -322,13 +357,13 @@ Examples:
     )
     
     # Configuration commands
-    parser.add_argument("--set-key", metavar="PROVIDER", help="Set API key for provider (openai/grok/deepseek)")
+    parser.add_argument("--set-key", metavar="PROVIDER", help="Set API key for provider (openai/gemini/grok/deepseek)")
     parser.add_argument("--key", help="API key value")
     parser.add_argument("--set-default", metavar="PROVIDER", help="Set default provider")
     
     # Execution options
     parser.add_argument("input", nargs="?", help="User request for file/folder creation")
-    parser.add_argument("-p", "--provider", choices=["openai", "grok", "deepseek"], help="AI provider to use")
+    parser.add_argument("-p", "--provider", choices=["openai", "gemini", "grok", "deepseek"], help="AI provider to use")
     parser.add_argument("-m", "--model", help="Specific model to use")
     parser.add_argument("-d", "--dir", help="Base directory for creation (default: current)", default=".")
     parser.add_argument("--list-models", action="store_true", help="List available models")
@@ -341,10 +376,8 @@ Examples:
     if len(sys.argv) == 1:
         show_logo = True
     elif len(sys.argv) == 2 and sys.argv[1] in ["--help", "-h"]:
-        # 
         show_logo = False
     else:
-        # 
         show_logo = False
     
     if show_logo:

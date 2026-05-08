@@ -37,7 +37,7 @@
 
 ZynoxAI is a command-line tool that leverages artificial intelligence to create files and folders based on natural language descriptions. Instead of manually typing `mkdir`, `touch`, and writing file contents, you can simply describe what you want in plain English, and ZynoxAI will:
 
-- Parse your request using AI (GPT, Grok, or DeepSeek)
+- Parse your request using AI (GPT, Gemini, Grok, or DeepSeek)
 - Generate appropriate file/folder structures
 - Create them automatically on your filesystem
 
@@ -54,7 +54,7 @@ ZynoxAI is a command-line tool that leverages artificial intelligence to create 
 ## ✨ Features
 
 ### Core Features
-- 🤖 **Multi-AI Support** - Switch between OpenAI GPT, Grok (xAI), and DeepSeek
+- 🤖 **Multi-AI Support** - Switch between OpenAI GPT, Google Gemini, Grok (xAI), and DeepSeek
 - 🌐 **Natural Language** - Describe what you want in plain English
 - 📁 **Batch Operations** - Create multiple files/folders in one command
 - 🎨 **Nested Structures** - Automatically creates parent directories
@@ -78,6 +78,7 @@ ZynoxAI is a command-line tool that leverages artificial intelligence to create 
 | Provider | Models | Best For | Token Limit |
 |----------|--------|----------|-------------|
 | **OpenAI** | `gpt-3.5-turbo`<br>`gpt-4o-mini`<br>`gpt-4o` | General purpose, high quality | 8K-16K |
+| **Gemini** | `gemini-1.5-flash`<br>`gemini-1.5-pro`<br>`gemini-2.0-flash-exp` | Real-time, code, high quality | 8K |
 | **Grok** | `grok-beta`<br>`grok-2-1212`<br>`grok-2-vision-1212` | Real-time, witty responses | 8K |
 | **DeepSeek** | `deepseek-chat`<br>`deepseek-coder` | Code generation, cost-effective | 128K |
 
@@ -155,6 +156,9 @@ You need to set API keys for the providers you want to use:
 # OpenAI (get from: https://platform.openai.com/api-keys)
 zynox --set-key openai --key sk-your-openai-key
 
+# Gemini (get from: https://aistudio.google.com/app/apikey)
+zynox --set-key gemini --key YOUR_GEMINI_API_KEY
+
 # Grok/xAI (get from: https://console.x.ai/)
 zynox --set-key grok --key xai-your-grok-key
 
@@ -167,6 +171,9 @@ Setting Default Provider
 ```bash
 # Set OpenAI as default
 zynox --set-default openai
+
+# Set Gemini as default
+zynox --set-default gemini
 
 # Set Grok as default
 zynox --set-default grok
@@ -235,6 +242,9 @@ Using Specific Providers
 ```bash
 # Use OpenAI
 zynox -p openai "create a config.json file"
+
+# Use Gemini
+zynox -p gemini "create a index.html file"
 
 # Use Grok
 zynox -p grok "create a bash script called backup.sh"
@@ -378,11 +388,13 @@ Configuration Commands
 ```bash
 # Set API keys
 zynox --set-key openai --key sk-xxx
+zynox --set-key gemini --key YOUR_GEMINI_API_KEY
 zynox --set-key grok --key xai-xxx
 zynox --set-key deepseek --key sk-xxx
 
 # Set defaults
 zynox --set-default openai
+zynox --set-default gemini
 zynox --set-default grok
 zynox --set-default deepseek
 
@@ -529,6 +541,7 @@ Where to Get API Keys
 
 Provider Sign Up URL Cost Free Tier
 OpenAI platform.openai.com Pay-as-you-go $5 free credit
+Gemini https://aistudio.google.com/app/apikey Pay-as-you-go / Free tier available
 Grok (xAI) console.x.ai Pay-as-you-go Limited free
 DeepSeek platform.deepseek.com Very cheap ¥10M free tokens
 
