@@ -7,7 +7,7 @@
 ![License](https://img.shields.io/badge/license-MIT-orange.svg)
 ![Platform](https://img.shields.io/badge/platform-Termux%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)
 
-**Create files and folders using natural language with GPT, Grok, and DeepSeek AI**
+**Create files and folders using natural language with GPT, Gemini, Grok, and DeepSeek AI**
 
 [Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Usage Guide](#-usage-guide) • [Examples](#-examples)
 
