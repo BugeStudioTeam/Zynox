@@ -18,6 +18,38 @@ from .core.file.manager import FileManager
 from .core.file.search import FileSearcher
 from .bot.telegram import TelegramBot
 
+
+def print_about():
+    """Print about information"""
+    about_text = f"""
+{green('ZynoxAI')} - AI-Powered File & Folder Creation Tool
+
+{magenta('Version:')}     3.5.5
+{magenta('Author:')}      Buge Studio
+{magenta('License:')}     MIT
+
+{magenta('Description:')}
+  Create files and folders using natural language with AI
+  Powered by GPT, Gemini, Grok, and DeepSeek
+
+{magenta('Features:')}
+  • Multi-AI Support (OpenAI, Gemini, Grok, DeepSeek)
+  • Natural Language Processing
+  • Conversation Memory & Sessions
+  • Smart Package Installation
+  • Telegram Bot Remote Control
+  • Cross-Platform (Termux, Linux, macOS, Windows WSL)
+
+{magenta('Links:')}
+  GitHub:  https://github.com/BugeStudioTeam/Zynox
+  Studio:  https://github.com/BugeStudioTeam
+
+{magenta('Support:')}
+  • Report issues on GitHub
+  • Star the repository if you like it!
+"""
+    print(about_text)
+
 class ZynoxAI:
     """Main ZynoxAI application"""
     
@@ -117,10 +149,8 @@ class ZynoxAI:
                 if stdout:
                     print(stdout[:500])
             elif t == "file":
-                # Files are automatically created in output/create/
                 self.file_manager.create_file(action.get("path"), action.get("content", ""), base_path)
             elif t == "folder":
-                # Folders are automatically created in output/create/
                 self.file_manager.create_folder(action.get("path"), base_path)
             elif t == "complete":
                 print(green(f"[Done: {action.get('message', 'Complete')}]"))
@@ -146,6 +176,7 @@ class ZynoxAI:
         
         return success
 
+
 def main():
     """Main entry point"""
     parser = argparse.ArgumentParser(
@@ -166,11 +197,15 @@ Examples:
   zynox --clear-memory
   zynox --list-created
   zynox --clear-created
+  zynox --about
   zynox --telegram-bot YOUR_TOKEN
 
 Note: All created files are saved in ~/ZynoxAI/output/create/
         """
     )
+    
+    # About command
+    parser.add_argument("--about", action="store_true", help="Show about information")
     
     # Memory commands
     parser.add_argument("--new-session", action="store_true", help="Start new conversation")
@@ -200,6 +235,12 @@ Note: All created files are saved in ~/ZynoxAI/output/create/
     parser.add_argument("-d", "--dir", help="Working directory", default=".")
     
     args = parser.parse_args()
+    
+    # Handle about command first
+    if args.about:
+        print_logo()
+        print_about()
+        sys.exit(0)
     
     # Show logo only when no arguments
     if len(sys.argv) == 1:
@@ -298,6 +339,7 @@ Note: All created files are saved in ~/ZynoxAI/output/create/
     
     success = zynox.run(args.input, args.provider, args.model, args.dir)
     sys.exit(0 if success else 1)
+
 
 if __name__ == "__main__":
     main()
