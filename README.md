@@ -1,4 +1,3 @@
-```markdown
 # 🚀 ZynoxAI - AI-Powered File & Folder Creation Tool
 
 <div align="center">
