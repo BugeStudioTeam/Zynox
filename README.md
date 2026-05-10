@@ -126,9 +126,7 @@ mkdir -p ~/ZynoxAI
 cd ~/ZynoxAI
 
 # Download the script
-wget https://raw.githubusercontent.com/BugeStudioTeam/Zynox/refs/heads/main/ZynoxAI/zynox.py
-# OR create manually (copy the code from this repo)
-nano zynox.py
+git clone https://github.com/BugeStudioTeam/Zynox.git
 ```
 
 ### Step 3: Set Up Alias (Optional but Recommended)
