@@ -150,6 +150,9 @@ zynox
 
 # Should show help menu
 zynox --help
+
+# Should show about menu
+zynox --about
 ```
 
 ---
