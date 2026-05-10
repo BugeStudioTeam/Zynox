@@ -1,4 +1,4 @@
-# 🚀 ZynoxAI - AI-Powered File & Folder Creation Tool
+# 🚀 ZynoxAI - AI-Powered Automation Tool
 
 <div align="center">
 
