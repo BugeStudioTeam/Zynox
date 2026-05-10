@@ -1,15 +1,16 @@
+```markdown
 # 🚀 ZynoxAI - AI-Powered File & Folder Creation Tool
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.7+-green.svg)
 ![License](https://img.shields.io/badge/license-MIT-orange.svg)
 ![Platform](https://img.shields.io/badge/platform-Termux%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)
 
 **Create files and folders using natural language with GPT, Gemini, Grok, and DeepSeek AI**
 
-[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Usage Guide](#-usage-guide) • [Examples](#-examples)
+[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Usage Guide](#-usage-guide) • [Examples](#-examples) • [Telegram Bot](#-telegram-bot)
 
 </div>
 
@@ -26,6 +27,9 @@
 - [Usage Guide](#-usage-guide)
 - [Examples](#-examples)
 - [Commands Reference](#-commands-reference)
+- [Telegram Bot](#-telegram-bot)
+- [Smart Installation](#-smart-installation)
+- [Memory & Sessions](#-memory--sessions)
 - [Troubleshooting](#-troubleshooting)
 - [API Keys](#-api-keys)
 - [Project Structure](#-project-structure)
@@ -40,6 +44,8 @@ ZynoxAI is a command-line tool that leverages artificial intelligence to create 
 - Parse your request using AI (GPT, Gemini, Grok, or DeepSeek)
 - Generate appropriate file/folder structures
 - Create them automatically on your filesystem
+- Execute system commands intelligently
+- Auto-install missing packages
 
 ### Use Cases
 
@@ -48,6 +54,7 @@ ZynoxAI is a command-line tool that leverages artificial intelligence to create 
 - **Automation**: Script file generation without complex templates
 - **Mobile Development**: Run on Termux for on-the-go development
 - **Documentation**: Quickly create README, config files, and documentation
+- **Remote Control**: Use Telegram bot to control from anywhere
 
 ---
 
@@ -62,6 +69,9 @@ ZynoxAI is a command-line tool that leverages artificial intelligence to create 
 - 📝 **Code Generation** - Creates meaningful code content automatically
 - 🎨 **Color Output** - Beautiful terminal interface with colored logs
 - 💾 **Persistent Config** - Saves API keys and preferences locally
+- 🧠 **Memory System** - Remembers previous conversations and context
+- 💬 **Telegram Bot** - Control ZynoxAI remotely via Telegram
+- 🔧 **Smart Installation** - Auto-detects and installs missing packages
 
 ### Technical Features
 - ✅ **Zero Dependencies** - Only requires Python and `requests`
@@ -70,6 +80,7 @@ ZynoxAI is a command-line tool that leverages artificial intelligence to create 
 - ⏱️ **Configurable Timeout** - Handles slow connections gracefully
 - 🔐 **Secure** - API keys stored locally, never transmitted elsewhere
 - 📱 **Termux Optimized** - Works perfectly on Android devices
+- 🌍 **Cross-Platform** - Works on Termux, Linux, macOS, Windows
 
 ---
 
@@ -108,7 +119,7 @@ sudo apt install python3  # Linux
 pip install requests colorama
 ```
 
-Step 2: Clone/Create ZynoxAI
+### Step 2: Clone/Create ZynoxAI
 
 ```bash
 # Create directory
@@ -121,7 +132,7 @@ curl -o zynox.py https://raw.githubusercontent.com/yourusername/ZynoxAI/main/zyn
 nano zynox.py
 ```
 
-Step 3: Set Up Alias (Optional but Recommended)
+### Step 3: Set Up Alias (Optional but Recommended)
 
 ```bash
 # Add alias to ~/.bashrc
@@ -134,7 +145,7 @@ ln -s ~/ZynoxAI/zynox.py ~/bin/zynox
 chmod +x ~/ZynoxAI/zynox.py
 ```
 
-Step 4: Verify Installation
+### Step 4: Verify Installation
 
 ```bash
 # Should show the ZYNOX logo
@@ -146,7 +157,7 @@ zynox --help
 
 ---
 
-### 🔧 Configuration
+## 🔧 Configuration
 
 Setting API Keys
 
@@ -219,7 +230,7 @@ Example config.json:
 
 ---
 
-### 🚀 Quick Start
+## 🚀 Quick Start
 
 Basic Usage
 
@@ -268,7 +279,7 @@ zynox -d /sdcard/Documents "create notes.txt"
 
 ---
 
-### 📚 Usage Guide
+## 📚 Usage Guide
 
 Command Structure
 
@@ -286,6 +297,11 @@ Option Description Example
 --set-default Set default provider --set-default deepseek
 --list-models Show available models --list-models
 --show-config Show current configuration --show-config
+--new-session Start new conversation session --new-session
+--list-sessions List all saved sessions --list-sessions
+--load-session Load a previous session --load-session ID
+--delete-session Delete a session --delete-session ID
+--clear-memory Clear current session memory --clear-memory
 -h, --help Show help message --help
 
 Provider-Specific Tips
@@ -297,11 +313,18 @@ OpenAI
 · Use gpt-4o for complex projects
 · Use gpt-3.5-turbo for simple tasks
 
+Gemini
+
+· Free tier available
+· Great for code generation
+· Fast response times
+· Use gemini-1.5-flash for speed
+
 Grok (xAI)
 
 · Great for real-time interactions
 · Unique personality and style
-· 8K token limit (smaller than others)
+· 8K token limit
 
 DeepSeek
 
@@ -312,7 +335,7 @@ DeepSeek
 
 ---
 
-### 💡 Examples
+## 💡 Examples
 
 Web Development Projects
 
@@ -329,7 +352,7 @@ zynox -p deepseek -m deepseek-coder "create a Flask API with endpoints for GET, 
 
 Programming Projects
 
-```python
+```bash
 # Python project structure
 zynox "create a Python package with setup.py, README.md, requirements.txt, and src folder with __init__.py"
 
@@ -337,51 +360,39 @@ zynox "create a Python package with setup.py, README.md, requirements.txt, and s
 zynox "create a Python CLI tool with argparse that takes a filename and prints its contents"
 
 # Data science project
-zynox "create a Jupyter notebook with pandas and matplotlib imports with sample data visualization"
+zynox "create a Jupyter notebook with pandas and matplotlib imports"
 ```
 
 System Administration
 
 ```bash
 # Create backup scripts
-zynox "create a bash script that backs up my Downloads folder to a backup directory"
+zynox "create a bash script that backs up my Downloads folder"
 
 # Configuration files
-zynox "create a docker-compose.yml file with nginx, mysql, and phpmyadmin services"
+zynox "create a docker-compose.yml file with nginx and mysql"
 
-# Log files
-zynox "create an error.log and access.log file with initial headers"
+# Execute commands
+zynox "list all files in current directory"
+zynox "show disk usage"
 ```
 
-Document Generation
+File Operations
 
 ```bash
-# Project documentation
-zynox "create a comprehensive README.md with installation, usage, and API documentation sections"
+# Search and read files
+zynox "find abc.txt and read it"
 
-# Configuration files
-zynox "create a .env file with API_KEY, DATABASE_URL, and DEBUG variables"
+# Create based on existing files
+zynox "find config.yml and create a similar python script"
 
-# JSON data
-zynox "create a config.json with database settings, API endpoints, and logging configurations"
-```
-
-Complex Multi-File Projects
-
-```bash
-# Full-stack project
-zynox "create a full-stack web app with frontend/index.html, frontend/style.css, frontend/app.js, backend/server.py, and requirements.txt"
-
-# Machine learning project
-zynox "create a ML project with data/raw, data/processed, notebooks/analysis.ipynb, src/preprocess.py, src/train.py, and requirements.txt"
-
-# Game development
-zynox "create a Python game with main.py, player.py, enemy.py, settings.py, and assets/sprites folder"
+# Batch operations
+zynox "create a zip file with all python files"
 ```
 
 ---
 
-### 📖 Commands Reference
+## 📖 Commands Reference
 
 Configuration Commands
 
@@ -401,6 +412,25 @@ zynox --set-default deepseek
 # View settings
 zynox --show-config
 zynox --list-models
+```
+
+Session Management Commands
+
+```bash
+# Start new conversation
+zynox --new-session
+
+# List all saved sessions
+zynox --list-sessions
+
+# Load a previous session
+zynox --load-session session_20241208_143022
+
+# Delete a session
+zynox --delete-session session_20241208_143022
+
+# Clear current memory
+zynox --clear-memory
 ```
 
 Creation Commands
@@ -438,11 +468,175 @@ zynox -p openai -d ./api "create a REST API with Flask"
 
 ---
 
-### 🔍 Troubleshooting
+## 💬 Telegram Bot
+
+What is the Telegram Bot?
+
+ZynoxAI includes a Telegram bot that allows you to control the tool remotely from your phone or any device with Telegram. You can create files, run commands, and manage your projects from anywhere.
+
+Setting Up the Telegram Bot
+
+1. Create a bot with BotFather
+   · Open Telegram and search for @BotFather
+   · Send /newbot and follow the instructions
+   · Copy the bot token (format: 1234567890:ABCdefGHIJKLMNopqRsTUVwxyz)
+2. Install Telegram dependency
+
+```bash
+pip install python-telegram-bot
+```
+
+### 1. Start the bot
+
+```bash
+python zynox.py --telegram-bot YOUR_BOT_TOKEN
+```
+
+Telegram Bot Commands
+
+Command Description
+/start Show welcome message
+/help Show help menu
+/status Show bot and system status
+/new Start new conversation session
+/clear Clear current memory
+/history Show conversation history
+/list List files in current directory
+/pwd Show current working directory
+/cd <path> Change directory
+
+Using the Telegram Bot
+
+Simply send any natural language request to your bot:
+
+```
+User: "create a python file called test.py with print('Hello')"
+Bot: [Executes and returns result]
+
+User: "find abc.txt and read it"
+Bot: [Searches and displays content]
+
+User: "list all files"
+Bot: [Shows directory listing]
+```
+
+Running Bot in Background (Termux)
+
+```bash
+# Run in background
+nohup python zynox.py --telegram-bot YOUR_BOT_TOKEN > bot.log 2>&1 &
+
+# Check logs
+tail -f bot.log
+
+# Stop bot
+pkill -f "zynox.py"
+```
+
+Security
+
+· First user who interacts with the bot becomes admin
+· Admin can authorize other users with /authorize <user_id>
+· All commands require authorization (except first user)
+
+---
+
+## 🔧 Smart Installation
+
+Automatic Package Detection
+
+ZynoxAI automatically detects when a command is not available and offers to install it:
+
+```bash
+[Executing: zip files.zip *.txt]
+[Package 'zip' not found]
+Try to smart install 'zip'? (y/N): y
+[Installing zip...]
+[Installed zip successfully]
+[Command executed successfully]
+```
+
+Supported Package Managers
+
+Environment Package Manager
+Termux pkg
+Debian/Ubuntu apt
+RHEL/CentOS yum/dnf
+Arch Linux pacman
+macOS brew
+
+Special Tool Installation
+
+ZynoxAI can automatically install specialized tools:
+
+· apktool - For APK decompilation (auto-downloads from GitHub)
+· jadx - For Java/Android decompilation
+· dex2jar - For DEX to JAR conversion
+
+Manual Installation Fallback
+
+If automatic installation fails, ZynoxAI provides manual instructions:
+
+```bash
+[Could not auto-install apktool]
+[Please manually install: pkg search apktool or search online]
+```
+
+---
+
+## 🧠 Memory & Sessions
+
+How Memory Works
+
+ZynoxAI remembers your conversation context across multiple commands:
+
+```bash
+# First command
+zynox "find abc.txt"
+[Found: ./ZynoxAI/abc.txt]
+
+# Second command (remembers previous)
+zynox "read it"
+[Read: ./ZynoxAI/abc.txt (123 bytes)]
+```
+
+Session Management
+
+```bash
+# Start a fresh session
+zynox --new-session
+
+# List all saved sessions
+zynox --list-sessions
+# Output:
+#   session_20241208_143022 - 5 msgs - 2024-12-08T14:30:22
+#   session_20241207_091345 - 12 msgs - 2024-12-07T09:13:45
+
+# Load a previous session
+zynox --load-session session_20241208_143022
+
+# Delete a session
+zynox --delete-session session_20241207_091345
+
+# Clear current memory
+zynox --clear-memory
+```
+
+Session Storage
+
+Sessions are stored in ~/.zynoxai/memories/ as JSON files. Each session contains:
+
+· Session ID and creation timestamp
+· Full conversation history
+· Message timestamps
+
+---
+
+## 🔍 Troubleshooting
 
 Common Issues and Solutions
 
-1. Permission Denied Error
+### 1. Permission Denied Error
 
 Error:
 
@@ -458,7 +652,7 @@ echo "alias zynox='python ~/ZynoxAI/zynox.py'" >> ~/.bashrc
 source ~/.bashrc
 ```
 
-2. API 400 Error (DeepSeek)
+### 2. API 400 Error (DeepSeek)
 
 Error:
 
@@ -473,7 +667,7 @@ Solution:
 zynox -p deepseek -m deepseek-chat "create file"
 ```
 
-3. Timeout Error
+### 3. Timeout Error
 
 Error:
 
@@ -484,13 +678,13 @@ Error:
 Solution:
 
 ```bash
-# Increase timeout in code (edit zynox.py)
-# Find 'timeout=60' and increase to 90 or 120
-# Or use a different provider
+# Use a different provider
 zynox -p openai "create file"
+# Or simplify your request
+zynox "create a simple text file"
 ```
 
-4. JSON Parse Error
+### 4. JSON Parse Error
 
 Error:
 
@@ -503,10 +697,9 @@ Solution:
 ```bash
 # Simplify your request
 zynox "create a simple text file"  # Instead of complex HTML
-# Or increase max_tokens in code
 ```
 
-5. API Key Not Working
+### 5. API Key Not Working
 
 Solution:
 
@@ -524,6 +717,17 @@ curl -X POST https://api.deepseek.com/v1/chat/completions \
   -d '{"model": "deepseek-chat", "messages": [{"role": "user", "content": "Hi"}]}'
 ```
 
+### 6. Telegram Bot Not Starting
+
+Error:
+
+```
+RuntimeError: set_wakeup_fd only works in main thread
+```
+
+Solution:
+Use the fixed version that runs bot in main thread (included in the code).
+
 Debug Mode
 
 ```bash
@@ -535,13 +739,13 @@ python ~/ZynoxAI/zynox.py "test" 2>&1
 
 ---
 
-### 🔑 API Keys
+## 🔑 API Keys
 
 Where to Get API Keys
 
 Provider Sign Up URL Cost Free Tier
 OpenAI platform.openai.com Pay-as-you-go $5 free credit
-Gemini https://aistudio.google.com/app/apikey Pay-as-you-go / Free tier available
+Gemini aistudio.google.com Pay-as-you-go Free tier available
 Grok (xAI) console.x.ai Pay-as-you-go Limited free
 DeepSeek platform.deepseek.com Very cheap ¥10M free tokens
 
@@ -550,7 +754,7 @@ Setting Up API Keys
 1. Create an account at the provider's website
 2. Navigate to API Keys section
 3. Generate a new API key
-4. Copy the key (starts with sk- typically)
+4. Copy the key (starts with sk- typically for OpenAI/DeepSeek)
 5. Set it in ZynoxAI: zynox --set-key PROVIDER --key YOUR_KEY
 
 Security Best Practices
@@ -564,25 +768,31 @@ Security Best Practices
 
 ---
 
-📁 Project Structure
+## 📁 Project Structure
 
 ```
 ~/
 ├── ZynoxAI/
 │   └── zynox.py              # Main script
 └── .zynoxai/
-    └── config.json           # Configuration file (auto-created)
+    ├── config.json           # Configuration file (auto-created)
+    ├── memories/             # Session storage directory
+    │   ├── session_xxx.json  # Saved conversation sessions
+    │   └── ...
+    └── telegram_config.json  # Telegram bot configuration
 ```
 
 File Descriptions
 
 · zynox.py: Main executable script
 · config.json: Stores API keys and preferences
+· memories/: Directory containing saved conversation sessions
+· telegram_config.json: Stores Telegram bot authorized users
 · ~/.bashrc: Alias configuration (optional)
 
 ---
 
-### 🤝 Contributing
+## 🤝 Contributing
 
 How to Contribute
 
@@ -604,7 +814,7 @@ python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dev dependencies
-pip install requests colorama black flake8
+pip install requests colorama python-telegram-bot black flake8
 
 # Run tests (manual testing for now)
 python zynox.py "create test.txt"
@@ -625,6 +835,26 @@ Feature Ideas
 · Undo/redo functionality
 · GUI wrapper (Tkinter/PyQt)
 · VS Code extension
-· Support for more AI providers (Claude, Gemini)
+· Support for more AI providers (Claude)
 · File content editing/updating
 · Git integration
+· Web interface
+· Docker support
+
+---
+
+📄 License
+
+MIT License
+
+---
+
+## 🙏 Acknowledgments
+
+· OpenAI for GPT models
+· Google for Gemini models
+· xAI for Grok models
+· DeepSeek for their excellent code generation models
+· python-telegram-bot for Telegram integration
+· Termux team for making Linux on Android possible
+· All contributors who help improve this tool
