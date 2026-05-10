@@ -41,23 +41,24 @@ class SessionManager:
         })
         self.save_current_session()
     
-    def get_context(self, limit: int = 5) -> str:
+    def get_conversation_context(self, limit: int = 5) -> str:
         """Get recent conversation context"""
         messages = self.current_session["messages"][-limit:]
         if not messages:
             return ""
-        context = "\nPrevious conversation:\n"
+        context = "\n"
         for msg in messages:
-            role = "User" if msg["role"] == "user" else "ZynoxAI"
+            role = "User" if msg["role"] == "user" else "Assistant"
             context += f"{role}: {msg['content'][:200]}\n"
         return context
     
     def new_session(self):
         """Start a new session"""
         # Save old session to history
-        history_file = os.path.join(MEMORY_DIR, f"{self.current_session['session_id']}.json")
-        with open(history_file, 'w') as f:
-            json.dump(self.current_session, f, indent=2)
+        if self.current_session["messages"]:
+            history_file = os.path.join(MEMORY_DIR, f"{self.current_session['session_id']}.json")
+            with open(history_file, 'w') as f:
+                json.dump(self.current_session, f, indent=2)
         
         # Create new session
         self.current_session = {
@@ -66,15 +67,7 @@ class SessionManager:
             "created_at": datetime.now().isoformat()
         }
         self.save_current_session()
-    
-    def clear_memory(self):
-        """Clear current session memory"""
-        self.current_session = {
-            "session_id": f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-            "messages": [],
-            "created_at": datetime.now().isoformat()
-        }
-        self.save_current_session()
+        print(f"[New session created: {self.current_session['session_id']}]")
     
     def list_sessions(self) -> list:
         """List all saved sessions"""
@@ -107,3 +100,13 @@ class SessionManager:
             os.remove(session_file)
             return True
         return False
+    
+    def clear_memory(self):
+        """Clear current session memory"""
+        self.current_session = {
+            "session_id": f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            "messages": [],
+            "created_at": datetime.now().isoformat()
+        }
+        self.save_current_session()
+        print("[Memory cleared, new session started]")

@@ -1,3 +1,3 @@
-__version__ = "2.2.5"
-__author__ = "Buge Studio Team"
+__version__ = "3.5.6"
+__author__ = "Buge Studio"
 __license__ = "MIT"

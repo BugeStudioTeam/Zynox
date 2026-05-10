@@ -7,7 +7,7 @@ from pathlib import Path
 # Base directories
 BASE_DIR = os.path.expanduser("~/ZynoxAI")
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
-CREATE_DIR = os.path.join(OUTPUT_DIR, "create")  # 新增：创建文件的目录
+CREATE_DIR = os.path.join(OUTPUT_DIR, "create")
 CONFIG_DIR = os.path.expanduser("~/.zynoxai")
 CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
 MEMORY_DIR = os.path.join(CONFIG_DIR, "memories")

@@ -2,7 +2,6 @@
 
 import os
 import subprocess
-import re
 
 def detect_environment():
     """Detect if running in Termux or Linux"""
@@ -14,7 +13,7 @@ def detect_environment():
         return "linux"
 
 def get_package_manager():
-    """Get the appropriate package manager"""
+    """Get the appropriate package manager based on environment"""
     env = detect_environment()
     
     if env == "termux" or env == "android":
@@ -33,14 +32,19 @@ def get_package_manager():
         else:
             return "unknown"
 
-# Shell built-in commands
-SHELL_BUILTINS = {
-    'cd', 'cp', 'mv', 'rm', 'mkdir', 'rmdir', 'touch', 'ls', 'cat', 'echo',
-    'pwd', 'which', 'alias', 'unalias', 'export', 'unset', 'set', 'env',
-    'source', '.', 'exec', 'exit', 'kill', 'type', 'times', 'ulimit',
-    'umask', 'wait', 'jobs', 'fg', 'bg', 'shift', 'getopts', 'readonly',
-    'printf', 'test', '[', ']', 'true', 'false', 'head', 'tail', 'grep',
-    'sed', 'awk', 'find', 'xargs', 'sort', 'uniq', 'wc', 'tr', 'cut'
-}
-
-PACKAGE_MANAGERS = {'pkg', 'apt', 'apt-get', 'yum', 'dnf', 'pacman', 'brew', 'sudo'}
+def get_install_command(package_manager: str, package: str) -> str:
+    """Get install command based on package manager"""
+    if package_manager == "pkg":
+        return f"pkg install -y {package}"
+    elif package_manager == "apt":
+        return f"sudo apt install -y {package}"
+    elif package_manager == "yum":
+        return f"sudo yum install -y {package}"
+    elif package_manager == "dnf":
+        return f"sudo dnf install -y {package}"
+    elif package_manager == "pacman":
+        return f"sudo pacman -S --noconfirm {package}"
+    elif package_manager == "brew":
+        return f"brew install {package}"
+    else:
+        return None

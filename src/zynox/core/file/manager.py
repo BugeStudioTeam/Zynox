@@ -3,29 +3,22 @@
 import os
 import shutil
 from ...config import Config
-from ...utils.colors import green, red, cyan
+from ...utils.colors import green, red, cyan, yellow
 
 class FileManager:
     """Manage file and folder operations"""
     
     @staticmethod
     def get_absolute_path(path: str, base_path: str = ".") -> str:
-        """
-        Get absolute path for file creation.
-        All created files go to output/create/ directory.
-        """
+        """Get absolute path for file creation. All created files go to output/create/ directory."""
         create_dir = Config.get_create_dir()
         
-        # If path starts with output/create/, use as-is
         if path.startswith(create_dir):
             return path
         
-        # If path is relative, place in output/create/
         if not os.path.isabs(path):
             return os.path.join(create_dir, path)
         
-        # For absolute paths, preserve structure under output/create/
-        # Remove leading slash to avoid double slashes
         clean_path = path.lstrip('/')
         return os.path.join(create_dir, clean_path)
     
@@ -37,7 +30,6 @@ class FileManager:
             os.makedirs(os.path.dirname(full_path), exist_ok=True)
             with open(full_path, 'w', encoding='utf-8') as f:
                 f.write(content)
-            # Show relative path from output/create/
             rel_path = os.path.relpath(full_path, Config.get_create_dir())
             print(green(f"[Created file: {rel_path}]"))
             return True
@@ -60,16 +52,28 @@ class FileManager:
     
     @staticmethod
     def list_files(path: str = ".") -> str:
-        """List files in directory (shows actual filesystem, not just create dir)"""
+        """List files in directory"""
         try:
+            if not os.path.exists(path):
+                return f"Path not found: {path}"
+            
             items = os.listdir(path)
             files = [f for f in items if os.path.isfile(os.path.join(path, f))]
             dirs = [d for d in items if os.path.isdir(os.path.join(path, d))]
             
-            result = "Directories:\n" + "\n".join(f"  [DIR] {d}" for d in dirs[:10])
-            result += "\n\nFiles:\n" + "\n".join(f"  [FILE] {f}" for f in files[:20])
+            result = ""
+            if dirs:
+                result += "Directories:\n" + "\n".join(f"  [DIR] {d}" for d in dirs[:10])
+            if files:
+                if result:
+                    result += "\n\n"
+                result += "Files:\n" + "\n".join(f"  [FILE] {f}" for f in files[:20])
             if len(files) > 20:
                 result += f"\n  ... and {len(files) - 20} more"
+            
+            if not result:
+                result = "Directory is empty"
+            
             return result
         except Exception as e:
             return f"Error: {e}"
@@ -94,6 +98,9 @@ class FileManager:
             if len(files) > 20:
                 result += f"\n  ... and {len(files) - 20} more"
             
+            if not files and not dirs:
+                result += "Directory is empty"
+            
             return result
         except Exception as e:
             return f"Error: {e}"
@@ -102,12 +109,15 @@ class FileManager:
     def read_file(filepath: str) -> str:
         """Read file content (from actual filesystem)"""
         try:
-            full_path = filepath
-            # Also check in create directory if not found
-            if not os.path.exists(full_path):
+            if os.path.exists(filepath):
+                full_path = filepath
+            else:
                 alt_path = os.path.join(Config.get_create_dir(), os.path.basename(filepath))
                 if os.path.exists(alt_path):
                     full_path = alt_path
+                else:
+                    print(red(f"[File not found: {filepath}]"))
+                    return None
             
             with open(full_path, 'r', encoding='utf-8') as f:
                 content = f.read()
@@ -118,8 +128,8 @@ class FileManager:
             return None
     
     @staticmethod
-    def clear_created_files():
-        """Clear all created files (dangerous, asks confirmation)"""
+    def clear_created_files() -> bool:
+        """Clear all created files"""
         create_dir = Config.get_create_dir()
         confirm = input(cyan(f"Delete all files in {create_dir}? (y/N): "))
         if confirm.lower() == 'y':
@@ -127,4 +137,5 @@ class FileManager:
             os.makedirs(create_dir, exist_ok=True)
             print(green("[All created files cleared]"))
             return True
+        print(yellow("[Cancelled]"))
         return False

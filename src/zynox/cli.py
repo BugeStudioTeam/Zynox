@@ -8,103 +8,94 @@ import re
 from pathlib import Path
 
 from .config import Config
-from .utils.colors import print_logo, green, red, yellow, cyan, magenta
+from .constants import API_ENDPOINTS
+from .utils.colors import print_logo, print_about, green, red, yellow, cyan, magenta
 from .utils.helpers import detect_environment, get_package_manager
 from .memory.session import SessionManager
 from .core.ai_providers.factory import AIProviderFactory
-from .core.prompt.builder import PromptBuilder
 from .core.command.executor import CommandExecutor
 from .core.file.manager import FileManager
 from .core.file.search import FileSearcher
-from .bot.telegram import TelegramBot
+from .bot.telegram import TelegramBotHandler
 
-
-def print_about():
-    """Print about information"""
-    about_text = f"""
-{green('ZynoxAI')} - AI-Powered File & Folder Creation Tool
-
-{magenta('Version:')}     3.5.5
-{magenta('Author:')}      Buge Studio
-{magenta('License:')}     MIT
-
-{magenta('Description:')}
-  Create files and folders using natural language with AI
-  Powered by GPT, Gemini, Grok, and DeepSeek
-
-{magenta('Features:')}
-  • Multi-AI Support (OpenAI, Gemini, Grok, DeepSeek)
-  • Natural Language Processing
-  • Conversation Memory & Sessions
-  • Smart Package Installation
-  • Telegram Bot Remote Control
-  • Cross-Platform (Termux, Linux, macOS, Windows WSL)
-
-{magenta('Links:')}
-  GitHub:  https://github.com/BugeStudioTeam/Zynox
-  Studio:  https://github.com/BugeStudioTeam
-
-{magenta('Support:')}
-  • Report issues on GitHub
-  • Star the repository if you like it!
-"""
-    print(about_text)
 
 class ZynoxAI:
     """Main ZynoxAI application"""
     
     def __init__(self):
         self.config = Config()
-        self.session_manager = SessionManager()
+        self.memory = SessionManager()
         self.command_executor = CommandExecutor()
         self.file_manager = FileManager()
         self.file_searcher = FileSearcher()
         self.current_provider = self.config.get_default_provider()
+        self.environment = detect_environment()
+        self.package_manager = get_package_manager()
         self.task_complete = False
+        print(cyan(f"[Environment: {self.environment.upper()}]"))
+        print(cyan(f"[Package Manager: {self.package_manager}]"))
     
-    def process_request(self, user_input: str, base_path: str = ".") -> bool:
-        """Process a user request"""
-        if not user_input:
-            return False
+    def create_prompt(self, user_input: str, context: str = "", file_list: str = "") -> str:
+        """Create a prompt for the AI with context"""
+        conversation = self.memory.get_conversation_context(limit=3)
+        env_info = f"\n[Environment: {self.environment}, Package Manager: {self.package_manager}]\n"
         
-        # Show where files will be created
-        print(cyan(f"[Files will be created in: {Config.get_create_dir()}]"))
+        context_section = ""
+        if context:
+            if len(context) > 2000:
+                context = context[:2000] + "\n... (truncated)"
+            context_section = f"\nFile Content Reference:\n{context}\n"
         
-        # Check for file search patterns
-        search_pattern = re.search(r'find\s+[\'"]?([^\'"]+\.(?:html|css|js|py|json|yml|yaml|txt|md))[\'"]?', user_input, re.IGNORECASE)
+        file_list_section = f"\nCurrent Directory Files:\n{file_list[:1000]}\n" if file_list else ""
         
-        context = ""
-        if search_pattern:
-            filename = search_pattern.group(1)
-            found_file = self.file_searcher.find_file(filename, base_path)
-            if found_file:
-                file_content = self.file_manager.read_file(found_file)
-                if file_content:
-                    context = file_content
-                    print(green(f"✓ Using '{filename}' as reference\n"))
-        
-        # Build prompt
-        file_list = self.file_manager.list_files(base_path)
-        prompt = PromptBuilder.create_prompt(user_input, context, file_list)
-        
-        # Call AI
-        api_key = self.config.get_api_key(self.current_provider)
+        return f"""You are ZynoxAI. Execute the request and then output COMPLETE.
+
+{env_info}{conversation}{file_list_section}{context_section}
+User: {user_input}
+
+Output ONE JSON with actions. End with COMPLETE.
+
+Action types:
+- SEARCH FILE: {{"type": "search_file", "filename": "name"}}
+- SEARCH FOLDER: {{"type": "search_folder", "foldername": "name"}}
+- READ FILE: {{"type": "read", "path": "path"}}
+- LIST FILES: {{"type": "list", "path": "."}}
+- CREATE FILE: {{"type": "file", "path": "name", "content": "content"}}
+- CREATE FOLDER: {{"type": "folder", "path": "name"}}
+- COMMAND: {{"type": "command", "command": "cmd"}}
+- COMPLETE: {{"type": "complete", "message": "done"}}
+
+Examples:
+- List files: {{"type": "command", "command": "ls -la"}}
+- Show disk usage: {{"type": "command", "command": "df -h"}}
+- Show current directory: {{"type": "command", "command": "pwd"}}
+- Show system info: {{"type": "command", "command": "uname -a"}}
+
+For multiple actions:
+{{"actions": [
+    {{"type": "command", "command": "mkdir -p myproject"}},
+    {{"type": "file", "path": "myproject/index.html", "content": "<h1>Hello</h1>"}},
+    {{"type": "complete", "message": "Project created"}}
+]}}
+
+JSON:"""
+    
+    def call_api(self, provider: str, prompt: str, model: str = None, retry: int = 0) -> str:
+        """Call the AI API"""
+        api_key = self.config.get_api_key(provider)
         if not api_key:
-            print(red(f"[No API key for {self.current_provider}]"))
-            return False
+            print(red(f"[No API key for {provider}]"))
+            return None
         
-        provider = AIProviderFactory.create(self.current_provider, api_key)
+        provider_instance = AIProviderFactory.create(provider, api_key)
         default_model = self.config.get_default_model()
         
         try:
             print(cyan("[Thinking...]"))
-            ai_response = provider.call(prompt, default_model)
-            
-            # Parse and execute
-            return self.parse_and_execute(ai_response, base_path)
+            return provider_instance.call(prompt, model or default_model)
         except Exception as e:
             print(red(f"[Error: {e}]"))
-            return False
+            return None
     
     def parse_and_execute(self, ai_response: str, base_path: str = ".") -> bool:
         """Parse AI response and execute actions"""
@@ -127,6 +118,7 @@ class ZynoxAI:
         elif "actions" in data:
             actions = data["actions"]
         else:
+            print(red("[Invalid response format - missing 'type' or 'actions']"))
             return False
         
         for action in actions:
@@ -143,11 +135,19 @@ class ZynoxAI:
                     if content:
                         print(f"\n{cyan('='*50)}\n{content[:1000]}\n{cyan('='*50)}\n")
             elif t == "list":
-                print(f"\n{cyan(self.file_manager.list_files(action.get('path', base_path)))}\n")
+                path = action.get("path", base_path)
+                files = self.file_manager.list_files(path)
+                if files:
+                    print(f"\n{cyan(files)}\n")
             elif t == "command":
-                stdout, stderr = self.command_executor.execute(action.get("command"))
-                if stdout:
-                    print(stdout[:500])
+                cmd = action.get("command")
+                if cmd:
+                    print(cyan(f"[Executing command: {cmd}]"))
+                    stdout, stderr = self.command_executor.execute(cmd)
+                    if stdout and stdout.strip():
+                        print(stdout)
+                    if stderr and stderr.strip():
+                        print(yellow(f"[stderr: {stderr[:500]}]"))
             elif t == "file":
                 self.file_manager.create_file(action.get("path"), action.get("content", ""), base_path)
             elif t == "folder":
@@ -156,23 +156,50 @@ class ZynoxAI:
                 print(green(f"[Done: {action.get('message', 'Complete')}]"))
                 self.task_complete = True
                 return True
+            else:
+                print(yellow(f"[Unknown action type: {t}]"))
         
         return True
     
-    def run(self, user_input: str, provider: str = None, model: str = None, base_path: str = "."):
+    def run(self, user_input: str, provider: str = None, model: str = None, base_path: str = ".") -> bool:
         """Main execution"""
-        if provider:
-            self.current_provider = provider
-        if model:
-            self.config.set_default_model(model)
+        if not user_input:
+            return False
         
-        self.session_manager.add_message("user", user_input)
+        self.memory.add_message("user", user_input)
         self.task_complete = False
         
-        success = self.process_request(user_input, base_path)
+        # Show where files will be created
+        print(cyan(f"[Files will be created in: {Config.get_create_dir()}]"))
         
-        if success:
-            self.session_manager.add_message("assistant", "Task completed")
+        # Check for file search patterns
+        search_pattern = re.search(r'find\s+[\'"]?([^\'"]+\.(?:html|css|js|py|json|yml|yaml|txt|md))[\'"]?', user_input, re.IGNORECASE)
+        
+        context = ""
+        if search_pattern:
+            filename = search_pattern.group(1)
+            found_file = self.file_searcher.find_file(filename, base_path)
+            if found_file:
+                file_content = self.file_manager.read_file(found_file)
+                if file_content:
+                    context = file_content
+                    print(green(f"✓ Using '{filename}' as reference\n"))
+        
+        # Build and execute
+        target_provider = provider or self.current_provider
+        file_list = self.file_manager.list_files(base_path)
+        prompt = self.create_prompt(user_input, context, file_list)
+        response = self.call_api(target_provider, prompt, model)
+        
+        if not response:
+            print(red("[No response]"))
+            return False
+        
+        self.memory.add_message("assistant", response[:300])
+        success = self.parse_and_execute(response, base_path)
+        
+        if not self.task_complete:
+            print(yellow("[Task may not be complete]"))
         
         return success
 
@@ -200,6 +227,12 @@ Examples:
   zynox --about
   zynox --telegram-bot YOUR_TOKEN
 
+# Execute Linux commands
+  zynox "list all files"
+  zynox "show disk usage"
+  zynox "display current directory"
+  zynox "show me what's in this folder"
+
 Note: All created files are saved in ~/ZynoxAI/output/create/
         """
     )
@@ -212,6 +245,7 @@ Note: All created files are saved in ~/ZynoxAI/output/create/
     parser.add_argument("--list-sessions", action="store_true", help="List all sessions")
     parser.add_argument("--load-session", metavar="ID", help="Load a session")
     parser.add_argument("--delete-session", metavar="ID", help="Delete a session")
+    parser.add_argument("--delete-all-sessions", action="store_true", help="Delete all sessions")
     parser.add_argument("--clear-memory", action="store_true", help="Clear current memory")
     
     # File management commands
@@ -236,7 +270,7 @@ Note: All created files are saved in ~/ZynoxAI/output/create/
     
     args = parser.parse_args()
     
-    # Handle about command first
+    # Handle about command
     if args.about:
         print_logo()
         print_about()
@@ -251,9 +285,9 @@ Note: All created files are saved in ~/ZynoxAI/output/create/
     session = SessionManager()
     file_manager = FileManager()
     
-    # Handle Telegram bot (runs separately)
+    # Handle Telegram bot
     if args.telegram_bot:
-        bot = TelegramBot(zynox, args.telegram_bot)
+        bot = TelegramBotHandler(zynox, args.telegram_bot)
         print(green("[Telegram Bot running. Press Ctrl+C to stop]"))
         try:
             bot.run()
@@ -293,6 +327,13 @@ Note: All created files are saved in ~/ZynoxAI/output/create/
         else:
             print(red(f"[Session not found: {args.delete_session}]"))
         sys.exit(0)
+    if args.delete_all_sessions:
+        confirm = input(cyan("Delete all sessions? (y/N): "))
+        if confirm.lower() == 'y':
+            for s in session.list_sessions():
+                session.delete_session(s['id'])
+            print(green("[All sessions deleted]"))
+        sys.exit(0)
     if args.clear_memory:
         session.clear_memory()
         print(green("[Memory cleared]"))
@@ -311,17 +352,10 @@ Note: All created files are saved in ~/ZynoxAI/output/create/
         print(green(f"[Default provider set to {args.set_default}]"))
         sys.exit(0)
     if args.list_models:
-        from .core.ai_providers.factory import AIProviderFactory
-        for p in AIProviderFactory.get_available_providers():
+        for p, info in API_ENDPOINTS.items():
             print(f"\n{p.upper()}:")
-            if p == "openai":
-                print("  - gpt-3.5-turbo\n  - gpt-4o-mini\n  - gpt-4o")
-            elif p == "gemini":
-                print("  - gemini-1.5-flash\n  - gemini-1.5-pro\n  - gemini-2.0-flash-exp")
-            elif p == "grok":
-                print("  - grok-beta\n  - grok-2-1212\n  - grok-2-vision-1212")
-            elif p == "deepseek":
-                print("  - deepseek-chat\n  - deepseek-coder")
+            for m in info["models"]:
+                print(f"  - {m}")
         sys.exit(0)
     if args.show_config:
         print(f"Default Provider: {config.get_default_provider()}")
