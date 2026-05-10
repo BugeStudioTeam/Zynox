@@ -1,7 +1,0 @@
-{
-  "api_keys": {
-    "openai/gemini/grok/deepseek": "Your API"
-  },
-  "default_provider": "openai/gemini/grok/deepseek",
-  "default_model": "deepseek-chat/..."
-}
