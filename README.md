@@ -121,12 +121,13 @@ pip install requests colorama
 ### Step 2: Clone/Create ZynoxAI
 
 ```bash
-# Create directory
-mkdir -p ~/ZynoxAI
-cd ~/ZynoxAI
-
 # Download the script
 git clone https://github.com/BugeStudioTeam/Zynox.git
+
+# Rename
+mv Zynox ZynoxAI
+
+cd ~/ZynoxAI
 ```
 
 ### Step 3: Set Up Alias (Optional but Recommended)
