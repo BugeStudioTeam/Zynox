@@ -824,13 +824,95 @@ ZynoxAI/
             └── telegram.py
 ```
 
-File Descriptions
+# ZynoxAI File Descriptions
 
-· zynox.py: Main executable script
-· config.json: Stores API keys and preferences
-· memories/: Directory containing saved conversation sessions
-· telegram_config.json: Stores Telegram bot authorized users
-· ~/.bashrc: Alias configuration (optional)
+## Root Directory
+
+| File | Description |
+|------|-------------|
+| `zynox.py` | Main entry point, CLI launcher |
+| `__init__.py` | Package initializer, exports version |
+| `__main__.py` | Allows `python -m zynox` execution |
+| `requirements.txt` | Python dependencies list |
+
+## src/zynox/
+
+| File | Description |
+|------|-------------|
+| `__init__.py` | Core package initializer |
+| `__version__.py` | Version, author, license info |
+| `cli.py` | Main CLI logic, argument parsing, request handling |
+| `config.py` | Configuration management, file paths, API keys |
+| `constants.py` | API endpoints, shell builtins, package mappings |
+| `exceptions.py` | Custom exception classes |
+
+## src/zynox/utils/
+
+| File | Description |
+|------|-------------|
+| `colors.py` | Color output functions, logo, about info |
+| `helpers.py` | Environment detection, package manager detection |
+| `logger.py` | Logging setup and configuration |
+
+## src/zynox/memory/
+
+| File | Description |
+|------|-------------|
+| `session.py` | Conversation memory, session save/load, history |
+
+## src/zynox/core/ai_providers/
+
+| File | Description |
+|------|-------------|
+| `base.py` | Abstract base class for all AI providers |
+| `openai.py` | OpenAI GPT API integration |
+| `gemini.py` | Google Gemini API integration |
+| `grok.py` | xAI Grok API integration |
+| `deepseek.py` | DeepSeek API integration |
+| `factory.py` | Factory pattern for creating AI instances |
+
+## src/zynox/core/command/
+
+| File | Description |
+|------|-------------|
+| `executor.py` | System command execution with environment awareness |
+| `installer.py` | Smart package installation, apktool installer |
+
+## src/zynox/core/file/
+
+| File | Description |
+|------|-------------|
+| `manager.py` | File/folder creation, reading, listing, deletion |
+| `search.py` | File and folder search using find command |
+
+## src/zynox/core/prompt/
+
+| File | Description |
+|------|-------------|
+| `builder.py` | AI prompt construction with context |
+
+## src/zynox/bot/
+
+| File | Description |
+|------|-------------|
+| `telegram.py` | Telegram bot handler, commands, user authorization |
+
+## Output Directories (auto-created)
+
+| Directory | Description |
+|-----------|-------------|
+| `output/create/` | All created files and folders go here |
+| `output/logs/` | Application log files |
+| `output/cache/` | Temporary cached data |
+| `output/temp/` | Temporary working files |
+
+## Config Directories (auto-created at ~/.zynoxai/)
+
+| File/Dir | Description |
+|----------|-------------|
+| `config.json` | API keys and provider settings |
+| `memories/` | Saved conversation sessions |
+| `telegram_config.json` | Telegram bot authorized users |
 
 ---
 
