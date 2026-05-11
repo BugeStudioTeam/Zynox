@@ -772,15 +772,56 @@ Security Best Practices
 ## 📁 Project Structure
 
 ```
-~/
-├── ZynoxAI/
-│   └── zynox.py              # Main script
-└── .zynoxai/
-    ├── config.json           # Configuration file (auto-created)
-    ├── memories/             # Session storage directory
-    │   ├── session_xxx.json  # Saved conversation sessions
-    │   └── ...
-    └── telegram_config.json  # Telegram bot configuration
+ZynoxAI/
+├── zynox.py
+├── __init__.py
+├── __main__.py
+├── requirements.txt
+├── output/
+│   ├── create/
+│   ├── logs/
+│   ├── cache/
+│   └── temp/
+└── src/
+    └── zynox/
+        ├── __init__.py
+        ├── __version__.py
+        ├── cli.py
+        ├── config.py
+        ├── constants.py
+        ├── exceptions.py
+        ├── utils/
+        │   ├── __init__.py
+        │   ├── colors.py
+        │   ├── helpers.py
+        │   └── logger.py
+        ├── memory/
+        │   ├── __init__.py
+        │   └── session.py
+        ├── core/
+        │   ├── __init__.py
+        │   ├── ai_providers/
+        │   │   ├── __init__.py
+        │   │   ├── base.py
+        │   │   ├── openai.py
+        │   │   ├── gemini.py
+        │   │   ├── grok.py
+        │   │   ├── deepseek.py
+        │   │   └── factory.py
+        │   ├── command/
+        │   │   ├── __init__.py
+        │   │   ├── executor.py
+        │   │   └── installer.py
+        │   ├── file/
+        │   │   ├── __init__.py
+        │   │   ├── manager.py
+        │   │   └── search.py
+        │   └── prompt/
+        │       ├── __init__.py
+        │       └── builder.py
+        └── bot/
+            ├── __init__.py
+            └── telegram.py
 ```
 
 File Descriptions
