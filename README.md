@@ -824,9 +824,9 @@ ZynoxAI/
             └── telegram.py
 ```
 
-# ZynoxAI File Descriptions
+## ZynoxAI File Descriptions
 
-## Root Directory
+### Root Directory
 
 | File | Description |
 |------|-------------|
@@ -835,7 +835,7 @@ ZynoxAI/
 | `__main__.py` | Allows `python -m zynox` execution |
 | `requirements.txt` | Python dependencies list |
 
-## src/zynox/
+### src/zynox/
 
 | File | Description |
 |------|-------------|
@@ -846,7 +846,7 @@ ZynoxAI/
 | `constants.py` | API endpoints, shell builtins, package mappings |
 | `exceptions.py` | Custom exception classes |
 
-## src/zynox/utils/
+### src/zynox/utils/
 
 | File | Description |
 |------|-------------|
@@ -854,13 +854,13 @@ ZynoxAI/
 | `helpers.py` | Environment detection, package manager detection |
 | `logger.py` | Logging setup and configuration |
 
-## src/zynox/memory/
+### src/zynox/memory/
 
 | File | Description |
 |------|-------------|
 | `session.py` | Conversation memory, session save/load, history |
 
-## src/zynox/core/ai_providers/
+### src/zynox/core/ai_providers/
 
 | File | Description |
 |------|-------------|
@@ -871,33 +871,33 @@ ZynoxAI/
 | `deepseek.py` | DeepSeek API integration |
 | `factory.py` | Factory pattern for creating AI instances |
 
-## src/zynox/core/command/
+### src/zynox/core/command/
 
 | File | Description |
 |------|-------------|
 | `executor.py` | System command execution with environment awareness |
 | `installer.py` | Smart package installation, apktool installer |
 
-## src/zynox/core/file/
+### src/zynox/core/file/
 
 | File | Description |
 |------|-------------|
 | `manager.py` | File/folder creation, reading, listing, deletion |
 | `search.py` | File and folder search using find command |
 
-## src/zynox/core/prompt/
+### src/zynox/core/prompt/
 
 | File | Description |
 |------|-------------|
 | `builder.py` | AI prompt construction with context |
 
-## src/zynox/bot/
+### src/zynox/bot/
 
 | File | Description |
 |------|-------------|
 | `telegram.py` | Telegram bot handler, commands, user authorization |
 
-## Output Directories (auto-created)
+### Output Directories (auto-created)
 
 | Directory | Description |
 |-----------|-------------|
@@ -906,7 +906,7 @@ ZynoxAI/
 | `output/cache/` | Temporary cached data |
 | `output/temp/` | Temporary working files |
 
-## Config Directories (auto-created at ~/.zynoxai/)
+### Config Directories (auto-created at ~/.zynoxai/)
 
 | File/Dir | Description |
 |----------|-------------|
