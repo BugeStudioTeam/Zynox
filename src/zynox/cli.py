@@ -226,6 +226,9 @@ Examples:
   zynox --clear-created
   zynox --about
   zynox --telegram-bot YOUR_TOKEN
+  zynox --web                    # Start web server on port 5000
+  zynox --web --port 8080        # Start web server on port 8080
+  zynox --web --host 0.0.0.0     # Allow external access
 
 # Execute Linux commands
   zynox "list all files"
@@ -262,6 +265,11 @@ Note: All created files are saved in ~/ZynoxAI/output/create/
     # Telegram bot
     parser.add_argument("--telegram-bot", metavar="TOKEN", help="Start Telegram bot")
     
+    # Web server
+    parser.add_argument("--web", action="store_true", help="Start web server")
+    parser.add_argument("--host", default="0.0.0.0", help="Web server host (default: 0.0.0.0)")
+    parser.add_argument("--port", type=int, default=5000, help="Web server port (default: 5000)")
+    
     # Execution options
     parser.add_argument("input", nargs="?", help="Your request")
     parser.add_argument("-p", "--provider", choices=["openai", "gemini", "grok", "deepseek"], help="AI provider")
@@ -274,6 +282,21 @@ Note: All created files are saved in ~/ZynoxAI/output/create/
     if args.about:
         print_logo()
         print_about()
+        sys.exit(0)
+    
+    # Handle web server
+    if args.web:
+        try:
+            from .web.app import run_web_server
+            print(green("[Starting Web Server...]"))
+            run_web_server(host=args.host, port=args.port, debug=False)
+        except ImportError as e:
+            print(red(f"[Failed to import web modules: {e}]"))
+            print(yellow("[Please install: pip install flask flask-socketio eventlet]"))
+            sys.exit(1)
+        except Exception as e:
+            print(red(f"[Web server error: {e}]"))
+            sys.exit(1)
         sys.exit(0)
     
     # Show logo only when no arguments
@@ -319,7 +342,7 @@ Note: All created files are saved in ~/ZynoxAI/output/create/
         if session.load_session(args.load_session):
             print(green(f"[Loaded session: {args.load_session}]"))
         else:
-            print(red(f"[Session not found: {args.load_session}]"))
+            print(red(f("[Session not found: {args.load_session}]")))
         sys.exit(0)
     if args.delete_session:
         if session.delete_session(args.delete_session):

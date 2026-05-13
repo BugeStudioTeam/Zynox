@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZynoxAI - AI-Powered File Creation Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Fira Code', 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0e27 0%, #13183f 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(10, 14, 39, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #1e244a;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, #00d4ff, #9d4edd);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .nav {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .nav-link {
+            color: #8892b0;
+            text-decoration: none;
+            transition: color 0.3s;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: #00d4ff;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #0a0a1a;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #00ff9d;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Dashboard Stats */
+        .dashboard-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: #0a0a1a;
+            border: 1px solid #1e244a;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: #00d4ff;
+        }
+
+        .stat-title {
+            font-size: 0.85rem;
+            color: #8892b0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-top: 0.5rem;
+        }
+
+        /* Sections */
+        .sessions-list, .files-list {
+            background: #0a0a1a;
+            border: 1px solid #1e244a;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .sessions-list h3, .files-list h3 {
+            margin-bottom: 1rem;
+            color: #00d4ff;
+        }
+
+        .session-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #1e244a;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .session-item:hover {
+            background: rgba(0, 212, 255, 0.1);
+        }
+
+        .session-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .session-id {
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+
+        .session-date {
+            font-size: 0.75rem;
+            color: #8892b0;
+        }
+
+        .session-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Chat */
+        .chat-container {
+            background: #0a0a1a;
+            border: 1px solid #1e244a;
+            border-radius: 12px;
+            overflow: hidden;
+            height: calc(100vh - 200px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+
+        .message {
+            margin-bottom: 1rem;
+            display: flex;
+            gap: 12px;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #00d4ff, #9d4edd);
+            color: white;
+        }
+
+        .message.ai .message-content {
+            background: rgba(30, 36, 74, 0.8);
+            border: 1px solid #1e244a;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .message-content pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .chat-input-area {
+            padding: 1rem;
+            border-top: 1px solid #1e244a;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: #0a0e27;
+            border: 1px solid #1e244a;
+            border-radius: 8px;
+            padding: 12px;
+            color: #e0e0e0;
+            font-family: inherit;
+            resize: none;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: #00d4ff;
+        }
+
+        .send-btn {
+            background: linear-gradient(135deg, #00d4ff, #9d4edd);
+            border: none;
+            border-radius: 8px;
+            padding: 0 24px;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* Settings */
+        .settings-section {
+            background: #0a0a1a;
+            border: 1px solid #1e244a;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .settings-title {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: #00d4ff;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #1e244a;
+        }
+
+        .setting-label {
+            font-weight: 500;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #00d4ff;
+            color: #0a0e27;
+        }
+
+        .btn-primary:hover {
+            background: #00b8d4;
+        }
+
+        .btn-danger {
+            background: #ff5a5f;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #e04e52;
+        }
+
+        .btn-secondary {
+            background: #1e244a;
+            color: #e0e0e0;
+        }
+
+        .btn-secondary:hover {
+            background: #2a3058;
+        }
+
+        /* Forms */
+        select, input {
+            background: #0a0e27;
+            border: 1px solid #1e244a;
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: #e0e0e0;
+            font-family: inherit;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #00d4ff;
+        }
+
+        /* File items */
+        .file-item {
+            padding: 8px;
+            font-family: monospace;
+            border-bottom: 1px solid #1e244a;
+            white-space: pre-wrap;
+        }
+
+        /* Hidden */
+        .hidden {
+            display: none;
+        }
+
+        /* Terminal */
+        .terminal {
+            background: #0a0a0a;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 1.5rem;
+        }
+
+        .terminal-header {
+            background: #1e1e1e;
+            padding: 8px 12px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .terminal-dot.red { background: #ff5f56; }
+        .terminal-dot.yellow { background: #ffbd2e; }
+        .terminal-dot.green { background: #27c93f; }
+
+        .terminal-body {
+            padding: 1rem;
+            font-family: monospace;
+            font-size: 0.85rem;
+            height: 300px;
+            overflow-y: auto;
+        }
+
+        .terminal-line {
+            color: #00ff00;
+            margin-bottom: 4px;
+        }
+
+        .terminal-input-line {
+            display: flex;
+            gap: 8px;
+            padding: 0.5rem;
+            border-top: 1px solid #333;
+        }
+
+        .terminal-prompt {
+            color: #00ff00;
+        }
+
+        .terminal-input {
+            background: transparent;
+            border: none;
+            color: #00ff00;
+            flex: 1;
+            font-family: monospace;
+            outline: none;
+        }
+
+        /* Thinking indicator */
+        .thinking-indicator {
+            display: flex;
+            gap: 8px;
+            padding: 12px;
+            color: #00d4ff;
+        }
+
+        .thinking-indicator span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00d4ff;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .thinking-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .thinking-indicator span:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            .nav { display: none; }
+            .message-content { max-width: 85%; }
+            .dashboard-stats { grid-template-columns: 1fr; }
+            .setting-item { flex-direction: column; gap: 10px; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <h1>ZynoxAI</h1>
+        </div>
+        <nav class="nav">
+            <a class="nav-link active" data-page="dashboard">Dashboard</a>
+            <a class="nav-link" data-page="chat">Chat</a>
+            <a class="nav-link" data-page="settings">Settings</a>
+        </nav>
+        <div class="status-badge">
+            <div class="status-dot"></div>
+            <span id="status-text">Connected</span>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Dashboard Page -->
+        <div id="dashboard-page">
+            <div class="dashboard-stats">
+                <div class="stat-card">
+                    <div class="stat-title">Status</div>
+                    <div class="stat-value" id="stat-status">Loading...</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Provider</div>
+                    <div class="stat-value" id="stat-provider">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Environment</div>
+                    <div class="stat-value" id="stat-env">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Package Manager</div>
+                    <div class="stat-value" id="stat-pm">-</div>
+                </div>
+            </div>
+
+            <div class="sessions-list">
+                <h3>Saved Sessions</h3>
+                <div id="sessions-container">Loading...</div>
+                <div style="margin-top: 1rem; display: flex; gap: 10px;">
+                    <button class="btn btn-primary" onclick="newSession()">New Session</button>
+                    <button class="btn btn-secondary" onclick="clearMemory()">Clear Memory</button>
+                    <button class="btn btn-secondary" onclick="loadSessions()">Refresh</button>
+                </div>
+            </div>
+
+            <div class="files-list">
+                <h3>Created Files</h3>
+                <div id="created-files-container">Loading...</div>
+                <div style="margin-top: 1rem;">
+                    <button class="btn btn-danger" onclick="clearCreatedFiles()">Clear All Created Files</button>
+                </div>
+            </div>
+
+            <div class="terminal">
+                <div class="terminal-header">
+                    <div class="terminal-dot red"></div>
+                    <div class="terminal-dot yellow"></div>
+                    <div class="terminal-dot green"></div>
+                    <span style="margin-left: 8px;">Terminal</span>
+                </div>
+                <div class="terminal-body" id="terminal-body">
+                    <div class="terminal-line">ZynoxAI Terminal v2.2.5</div>
+                    <div class="terminal-line">Type commands below or use Chat for AI assistance</div>
+                    <div class="terminal-line">---</div>
+                </div>
+                <div class="terminal-input-line">
+                    <span class="terminal-prompt">$</span>
+                    <input type="text" class="terminal-input" id="terminal-input" placeholder="Enter command...">
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Page -->
+        <div id="chat-page" class="hidden">
+            <div class="chat-container">
+                <div class="chat-messages" id="chat-messages">
+                    <div class="message ai">
+                        <div class="message-avatar">🤖</div>
+                        <div class="message-content">
+                            Hello! I'm ZynoxAI.<br><br>
+                            I can help you:<br>
+                            • Create files and folders<br>
+                            • Execute system commands<br>
+                            • Search and read files<br>
+                            • Manage your project structure<br><br>
+                            <strong>Examples:</strong><br>
+                            "create a python file called hello.py with print('Hello')"<br>
+                            "find abc.txt and read it"<br>
+                            "list all files in current directory"<br><br>
+                            What would you like to do?
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <textarea class="chat-input" id="chat-input" placeholder="Describe what you want to do..." rows="3"></textarea>
+                    <button class="send-btn" onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Page -->
+        <div id="settings-page" class="hidden">
+            <div class="settings-section">
+                <div class="settings-title">AI Provider Settings</div>
+                <div class="setting-item">
+                    <div class="setting-label">Default Provider</div>
+                    <select id="provider-select">
+                        <option value="openai">OpenAI</option>
+                        <option value="gemini">Google Gemini</option>
+                        <option value="grok">xAI Grok</option>
+                        <option value="deepseek">DeepSeek</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">Default Model</div>
+                    <input type="text" id="model-input" placeholder="e.g., deepseek-chat">
+                </div>
+                <div style="margin-top: 1rem;">
+                    <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <div class="settings-title">API Keys</div>
+                <div id="api-keys-container"></div>
+                <div style="margin-top: 1rem; color: #ffaa00; font-size: 0.8rem;">
+                    ⚠️ API keys are stored locally in ~/.zynoxai/config.json<br>
+                    Never share your API keys publicly
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <div class="settings-title">About</div>
+                <div class="setting-item">
+                    <div class="setting-label">Version</div>
+                    <div>2.2.5</div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">Author</div>
+                    <div>Buge Studio</div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">GitHub</div>
+                    <div><a href="https://github.com/BugeStudioTeam/Zynox" style="color: #00d4ff;">github.com/BugeStudioTeam/Zynox</a></div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">License</div>
+                    <div>MIT</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // API Base URL
+        const API_BASE = '';
+
+        // Current page
+        let currentPage = 'dashboard';
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Setup navigation
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    const page = link.getAttribute('data-page');
+                    showPage(page);
+                    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                    link.classList.add('active');
+                });
+            });
+
+            // Setup terminal
+            const terminalInput = document.getElementById('terminal-input');
+            if (terminalInput) {
+                terminalInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        executeCommand(terminalInput.value);
+                        terminalInput.value = '';
+                    }
+                });
+            }
+
+            // Setup chat input
+            const chatInput = document.getElementById('chat-input');
+            if (chatInput) {
+                chatInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
+                    }
+                });
+            }
+
+            // Load initial data
+            loadDashboard();
+            loadStatus();
+        });
+
+        function showPage(page) {
+            currentPage = page;
+            document.getElementById('dashboard-page').classList.add('hidden');
+            document.getElementById('chat-page').classList.add('hidden');
+            document.getElementById('settings-page').classList.add('hidden');
+            document.getElementById(`${page}-page`).classList.remove('hidden');
+
+            if (page === 'dashboard') loadDashboard();
+            if (page === 'settings') loadSettings();
+        }
+
+        async function loadStatus() {
+            try {
+                const res = await fetch(`${API_BASE}/api/status`);
+                const data = await res.json();
+                document.getElementById('status-text').innerText = data.provider || 'Connected';
+            } catch(e) {
+                console.error('Status error:', e);
+            }
+        }
+
+        async function loadDashboard() {
+            try {
+                // Load status stats
+                const statusRes = await fetch(`${API_BASE}/api/status`);
+                const statusData = await statusRes.json();
+                document.getElementById('stat-status').innerHTML = '<span style="color: #00ff9d;">● Running</span>';
+                document.getElementById('stat-provider').innerText = statusData.provider || '-';
+                document.getElementById('stat-env').innerText = statusData.environment || '-';
+                document.getElementById('stat-pm').innerText = statusData.package_manager || '-';
+            } catch(e) { console.error(e); }
+
+            await loadSessions();
+            await loadCreatedFiles();
+        }
+
+        async function loadSessions() {
+            try {
+                const res = await fetch(`${API_BASE}/api/sessions`);
+                const data = await res.json();
+                const container = document.getElementById('sessions-container');
+                if (data.sessions && data.sessions.length > 0) {
+                    container.innerHTML = data.sessions.map(s => `
+                        <div class="session-item">
+                            <div class="session-info" onclick="loadSession('${s.id}')">
+                                <div class="session-id">${s.id}</div>
+                                <div class="session-date">${s.created || 'Unknown'} | ${s.message_count} messages</div>
+                            </div>
+                            <div class="session-actions">
+                                <button class="btn btn-secondary" onclick="event.stopPropagation(); loadSession('${s.id}')">Load</button>
+                                <button class="btn btn-danger" onclick="event.stopPropagation(); deleteSession('${s.id}')">Delete</button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div class="session-item">No saved sessions</div>';
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        async function loadCreatedFiles() {
+            try {
+                const res = await fetch(`${API_BASE}/api/created`);
+                const data = await res.json();
+                const container = document.getElementById('created-files-container');
+                if (data.files && data.files !== 'No files created yet') {
+                    container.innerHTML = `<pre class="file-item" style="white-space: pre-wrap;">${data.files}</pre>`;
+                } else {
+                    container.innerHTML = '<div class="file-item">No files created yet</div>';
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        async function loadSettings() {
+            try {
+                const res = await fetch(`${API_BASE}/api/config`);
+                const data = await res.json();
+                document.getElementById('provider-select').value = data.default_provider || 'openai';
+                document.getElementById('model-input').value = data.default_model || '';
+
+                const container = document.getElementById('api-keys-container');
+                const providers = ['openai', 'gemini', 'grok', 'deepseek'];
+                container.innerHTML = providers.map(p => `
+                    <div class="setting-item">
+                        <div class="setting-label">${p.toUpperCase()} API Key</div>
+                        <div>
+                            <input type="password" id="key-${p}" placeholder="Enter ${p} API key" style="width: 250px;">
+                            <button class="btn btn-primary" onclick="updateApiKey('${p}')">Save</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch(e) { console.error(e); }
+        }
+
+        async function saveSettings() {
+            const provider = document.getElementById('provider-select').value;
+            const model = document.getElementById('model-input').value;
+            try {
+                await fetch(`${API_BASE}/api/config`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ default_provider: provider, default_model: model })
+                });
+                alert('Settings saved');
+                loadStatus();
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+
+        async function updateApiKey(provider) {
+            const key = document.getElementById(`key-${provider}`).value;
+            if (!key) return;
+            const apiKeys = {};
+            apiKeys[provider] = key;
+            try {
+                await fetch(`${API_BASE}/api/config`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ api_keys: apiKeys })
+                });
+                alert(`${provider.toUpperCase()} API key saved`);
+                document.getElementById(`key-${provider}`).value = '';
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+
+        async function loadSession(sessionId) {
+            try {
+                await fetch(`${API_BASE}/api/sessions/load`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: sessionId })
+                });
+                alert('Session loaded');
+                loadSessions();
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+
+        async function deleteSession(sessionId) {
+            if (!confirm('Delete this session?')) return;
+            try {
+                await fetch(`${API_BASE}/api/sessions/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: sessionId })
+                });
+                alert('Session deleted');
+                loadSessions();
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+
+        async function newSession() {
+            try {
+                await fetch(`${API_BASE}/api/sessions/new`, { method: 'POST' });
+                alert('New session created');
+                loadSessions();
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+
+        async function clearMemory() {
+            if (!confirm('Clear current memory?')) return;
+            try {
+                await fetch(`${API_BASE}/api/sessions/clear`, { method: 'POST' });
+                alert('Memory cleared');
+                loadSessions();
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+
+        async function clearCreatedFiles() {
+            if (!confirm('Delete all created files? This cannot be undone.')) return;
+            try {
+                await fetch(`${API_BASE}/api/clear-created`, { method: 'POST' });
+                alert('Created files cleared');
+                loadCreatedFiles();
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+
+        async function executeCommand(command) {
+            const terminalBody = document.getElementById('terminal-body');
+            terminalBody.innerHTML += `<div class="terminal-line">$ ${command}</div>`;
+            terminalBody.scrollTop = terminalBody.scrollHeight;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/command`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: command })
+                });
+                const data = await res.json();
+                if (data.stdout) {
+                    terminalBody.innerHTML += `<div class="terminal-line">${data.stdout}</div>`;
+                }
+                if (data.stderr) {
+                    terminalBody.innerHTML += `<div class="terminal-line" style="color: #ffaa00;">${data.stderr}</div>`;
+                }
+                terminalBody.scrollTop = terminalBody.scrollHeight;
+            } catch(e) {
+                terminalBody.innerHTML += `<div class="terminal-line" style="color: #ff5a5f;">Error: ${e.message}</div>`;
+            }
+        }
+
+        let thinkingIndicator = null;
+
+        function showThinking() {
+            const messagesDiv = document.getElementById('chat-messages');
+            if (thinkingIndicator) thinkingIndicator.remove();
+            thinkingIndicator = document.createElement('div');
+            thinkingIndicator.className = 'thinking-indicator';
+            thinkingIndicator.innerHTML = '<span></span><span></span><span></span>';
+            messagesDiv.appendChild(thinkingIndicator);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function hideThinking() {
+            if (thinkingIndicator) {
+                thinkingIndicator.remove();
+                thinkingIndicator = null;
+            }
+        }
+
+        function addMessage(role, content) {
+            const messagesDiv = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            const avatar = role === 'user' ? '👤' : '🤖';
+            messageDiv.innerHTML = `
+                <div class="message-avatar">${avatar}</div>
+                <div class="message-content">${content.replace(/\n/g, '<br>')}</div>
+            `;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            addMessage('user', message);
+            input.value = '';
+            showThinking();
+
+            try {
+                const res = await fetch(`${API_BASE}/api/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message })
+                });
+                const data = await res.json();
+                hideThinking();
+                addMessage('ai', data.response || 'Task completed');
+            } catch(e) {
+                hideThinking();
+                addMessage('ai', `Error: ${e.message}`);
+            }
+        }
+
+        // Terminal command execution via API
+        async function executeCommand(command) {
+            const terminalBody = document.getElementById('terminal-body');
+            terminalBody.innerHTML += `<div class="terminal-line">$ ${command}</div>`;
+            terminalBody.scrollTop = terminalBody.scrollHeight;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/command`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: command })
+                });
+                const data = await res.json();
+                if (data.stdout) {
+                    terminalBody.innerHTML += `<div class="terminal-line">${data.stdout}</div>`;
+                }
+                if (data.stderr) {
+                    terminalBody.innerHTML += `<div class="terminal-line" style="color: #ffaa00;">${data.stderr}</div>`;
+                }
+                terminalBody.scrollTop = terminalBody.scrollHeight;
+            } catch(e) {
+                terminalBody.innerHTML += `<div class="terminal-line" style="color: #ff5a5f;">Error: ${e.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

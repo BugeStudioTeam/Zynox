@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - ZynoxAI</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="logo"><h1>ZynoxAI</h1></div>
+        <nav class="nav">
+            <a href="/" class="nav-link active">Dashboard</a>
+            <a href="/chat" class="nav-link">Chat</a>
+            <a href="/settings" class="nav-link">Settings</a>
+        </nav>
+        <div class="status-badge"><div class="status-dot"></div><span>Connected</span></div>
+    </header>
+
+    <main class="container">
+        <div class="dashboard-stats">
+            <div class="stat-card"><div class="stat-title">Status</div><div class="stat-value" id="stat-status">Loading...</div></div>
+            <div class="stat-card"><div class="stat-title">Provider</div><div class="stat-value" id="stat-provider">-</div></div>
+            <div class="stat-card"><div class="stat-title">Environment</div><div class="stat-value" id="stat-env">-</div></div>
+            <div class="stat-card"><div class="stat-title">Package Manager</div><div class="stat-value" id="stat-pm">-</div></div>
+        </div>
+
+        <div class="sessions-list">
+            <h3>Saved Sessions</h3>
+            <div id="sessions-container">Loading...</div>
+            <div style="margin-top: 1rem;"><button class="btn btn-primary" onclick="newSession()">New Session</button></div>
+        </div>
+
+        <div class="files-list">
+            <h3>Created Files</h3>
+            <div id="created-files-container">Loading...</div>
+        </div>
+    </main>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

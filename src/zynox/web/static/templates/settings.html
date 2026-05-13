@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - ZynoxAI</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="logo"><h1>ZynoxAI</h1></div>
+        <nav class="nav">
+            <a href="/" class="nav-link">Dashboard</a>
+            <a href="/chat" class="nav-link">Chat</a>
+            <a href="/settings" class="nav-link active">Settings</a>
+        </nav>
+        <div class="status-badge"><div class="status-dot"></div><span>Settings</span></div>
+    </header>
+
+    <main class="container">
+        <div class="settings-section">
+            <div class="settings-title">AI Provider Settings</div>
+            <div class="setting-item">
+                <span>Default Provider</span>
+                <select id="provider-select">
+                    <option value="openai">OpenAI</option>
+                    <option value="gemini">Gemini</option>
+                    <option value="grok">Grok</option>
+                    <option value="deepseek">DeepSeek</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <span>Default Model</span>
+                <input type="text" id="model-input" placeholder="e.g., deepseek-chat">
+            </div>
+            <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+        </div>
+
+        <div class="settings-section">
+            <div class="settings-title">API Keys</div>
+            <div id="api-keys-container"></div>
+        </div>
+
+        <div class="settings-section">
+            <div class="settings-title">About</div>
+            <div class="setting-item"><span>Version</span><span>2.2.5</span></div>
+            <div class="setting-item"><span>Author</span><span>Buge Studio</span></div>
+            <div class="setting-item"><span>License</span><span>MIT</span></div>
+            <div class="setting-item"><span>GitHub</span><span><a href="https://github.com/BugeStudioTeam/Zynox" style="color:#00d4ff;">github.com/BugeStudioTeam/Zynox</a></span></div>
+        </div>
+    </main>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

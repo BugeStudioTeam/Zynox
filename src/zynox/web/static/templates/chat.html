@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat - ZynoxAI</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="logo"><h1>ZynoxAI</h1></div>
+        <nav class="nav">
+            <a href="/" class="nav-link">Dashboard</a>
+            <a href="/chat" class="nav-link active">Chat</a>
+            <a href="/settings" class="nav-link">Settings</a>
+        </nav>
+        <div class="status-badge"><div class="status-dot"></div><span>Connected</span></div>
+    </header>
+
+    <main class="container">
+        <div class="chat-container">
+            <div class="chat-messages" id="chat-messages">
+                <div class="message ai">
+                    <div class="message-avatar">🤖</div>
+                    <div class="message-content">
+                        Hello! I'm ZynoxAI. What would you like to create today?
+                    </div>
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <textarea class="chat-input" id="chat-input" placeholder="Describe what you want to do..." rows="3"></textarea>
+                <button class="send-btn" onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
