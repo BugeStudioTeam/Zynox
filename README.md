@@ -334,6 +334,16 @@ DeepSeek
 · 128K context window (largest)
 · Use deepseek-coder for programming tasks
 
+Web page
+
+```bash
+#Start Server
+zynox --web
+```
+
+Go to your browser and visit: http://127.0.0.1:5000/
+
+
 ---
 
 ## 💡 Examples
