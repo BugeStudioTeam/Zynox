@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-3.5.5-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.7+-green.svg)
 ![License](https://img.shields.io/badge/license-MIT-orange.svg)
 ![Platform](https://img.shields.io/badge/platform-Termux%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)
@@ -121,12 +121,13 @@ pip install requests colorama
 ### Step 2: Clone/Create ZynoxAI
 
 ```bash
-# Create directory
-mkdir -p ~/ZynoxAI
-cd ~/ZynoxAI
-
 # Download the script
 git clone https://github.com/BugeStudioTeam/Zynox.git
+
+# Rename
+mv Zynox ZynoxAI
+
+cd ~/ZynoxAI
 ```
 
 ### Step 3: Set Up Alias (Optional but Recommended)
@@ -771,24 +772,147 @@ Security Best Practices
 ## 📁 Project Structure
 
 ```
-~/
-├── ZynoxAI/
-│   └── zynox.py              # Main script
-└── .zynoxai/
-    ├── config.json           # Configuration file (auto-created)
-    ├── memories/             # Session storage directory
-    │   ├── session_xxx.json  # Saved conversation sessions
-    │   └── ...
-    └── telegram_config.json  # Telegram bot configuration
+ZynoxAI/
+├── zynox.py
+├── __init__.py
+├── __main__.py
+├── requirements.txt
+├── output/
+│   ├── create/
+│   ├── logs/
+│   ├── cache/
+│   └── temp/
+└── src/
+    └── zynox/
+        ├── __init__.py
+        ├── __version__.py
+        ├── cli.py
+        ├── config.py
+        ├── constants.py
+        ├── exceptions.py
+        ├── utils/
+        │   ├── __init__.py
+        │   ├── colors.py
+        │   ├── helpers.py
+        │   └── logger.py
+        ├── memory/
+        │   ├── __init__.py
+        │   └── session.py
+        ├── core/
+        │   ├── __init__.py
+        │   ├── ai_providers/
+        │   │   ├── __init__.py
+        │   │   ├── base.py
+        │   │   ├── openai.py
+        │   │   ├── gemini.py
+        │   │   ├── grok.py
+        │   │   ├── deepseek.py
+        │   │   └── factory.py
+        │   ├── command/
+        │   │   ├── __init__.py
+        │   │   ├── executor.py
+        │   │   └── installer.py
+        │   ├── file/
+        │   │   ├── __init__.py
+        │   │   ├── manager.py
+        │   │   └── search.py
+        │   └── prompt/
+        │       ├── __init__.py
+        │       └── builder.py
+        └── bot/
+            ├── __init__.py
+            └── telegram.py
 ```
 
-File Descriptions
+## ZynoxAI File Descriptions
 
-· zynox.py: Main executable script
-· config.json: Stores API keys and preferences
-· memories/: Directory containing saved conversation sessions
-· telegram_config.json: Stores Telegram bot authorized users
-· ~/.bashrc: Alias configuration (optional)
+### Root Directory
+
+| File | Description |
+|------|-------------|
+| `zynox.py` | Main entry point, CLI launcher |
+| `__init__.py` | Package initializer, exports version |
+| `__main__.py` | Allows `python -m zynox` execution |
+| `requirements.txt` | Python dependencies list |
+
+### src/zynox/
+
+| File | Description |
+|------|-------------|
+| `__init__.py` | Core package initializer |
+| `__version__.py` | Version, author, license info |
+| `cli.py` | Main CLI logic, argument parsing, request handling |
+| `config.py` | Configuration management, file paths, API keys |
+| `constants.py` | API endpoints, shell builtins, package mappings |
+| `exceptions.py` | Custom exception classes |
+
+### src/zynox/utils/
+
+| File | Description |
+|------|-------------|
+| `colors.py` | Color output functions, logo, about info |
+| `helpers.py` | Environment detection, package manager detection |
+| `logger.py` | Logging setup and configuration |
+
+### src/zynox/memory/
+
+| File | Description |
+|------|-------------|
+| `session.py` | Conversation memory, session save/load, history |
+
+### src/zynox/core/ai_providers/
+
+| File | Description |
+|------|-------------|
+| `base.py` | Abstract base class for all AI providers |
+| `openai.py` | OpenAI GPT API integration |
+| `gemini.py` | Google Gemini API integration |
+| `grok.py` | xAI Grok API integration |
+| `deepseek.py` | DeepSeek API integration |
+| `factory.py` | Factory pattern for creating AI instances |
+
+### src/zynox/core/command/
+
+| File | Description |
+|------|-------------|
+| `executor.py` | System command execution with environment awareness |
+| `installer.py` | Smart package installation, apktool installer |
+
+### src/zynox/core/file/
+
+| File | Description |
+|------|-------------|
+| `manager.py` | File/folder creation, reading, listing, deletion |
+| `search.py` | File and folder search using find command |
+
+### src/zynox/core/prompt/
+
+| File | Description |
+|------|-------------|
+| `builder.py` | AI prompt construction with context |
+
+### src/zynox/bot/
+
+| File | Description |
+|------|-------------|
+| `telegram.py` | Telegram bot handler, commands, user authorization |
+
+### Output Directories (auto-created)
+
+| Directory | Description |
+|-----------|-------------|
+| `output/create/` | All created files and folders go here |
+| `output/logs/` | Application log files |
+| `output/cache/` | Temporary cached data |
+| `output/temp/` | Temporary working files |
+
+### Config Directories (auto-created at ~/.zynoxai/)
+
+| File/Dir | Description |
+|----------|-------------|
+| `config.json` | API keys and provider settings |
+| `memories/` | Saved conversation sessions |
+| `telegram_config.json` | Telegram bot authorized users |
 
 ---
 
