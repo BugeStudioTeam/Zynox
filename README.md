@@ -78,7 +78,6 @@ ZynoxAI is a command-line tool that leverages artificial intelligence to create 
 
 ### Technical Features
 - ✅ **Zero Dependencies** - Only requires Python and `requests`
-- 🚀 **Lightweight** - Single file, ~25KB, runs anywhere
 - 🔄 **Retry Logic** - Automatic retry on network failures
 - ⏱️ **Configurable Timeout** - Handles slow connections gracefully
 - 🔐 **Secure** - API keys stored locally, never transmitted elsewhere
