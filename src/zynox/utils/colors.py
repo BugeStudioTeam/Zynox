@@ -30,7 +30,7 @@ def magenta(text): return f"{Fore.MAGENTA}{text}{Style.RESET_ALL}"
 def print_about():
     """Print about information"""
     about_text = f"""
-{green('ZynoxAI v3.6.8')} - AI-Powered File & Folder Creation Tool
+{green('ZynoxAI v3.7.11')} - AI-Powered File & Folder Creation Tool
 {magenta('Author:')} Buge Studio | {magenta('License:')} MIT
 {magenta('GitHub:')} https://github.com/BugeStudioTeam/Zynox
 

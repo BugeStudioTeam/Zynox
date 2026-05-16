@@ -1,13 +1,14 @@
-"""Flask web application for ZynoxAI - Modern minimalist design with styled input"""
+"""Flask web application for ZynoxAI - Modern minimalist design with file delivery"""
 
 import os
 import sys
 import json
 import subprocess
 import io
-from contextlib import redirect_stdout
-from flask import Flask, render_template, request, jsonify
+import zipfile
 from pathlib import Path
+from flask import Flask, render_template, request, jsonify, send_file, send_from_directory
+from contextlib import redirect_stdout
 
 # Add parent to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -34,7 +35,7 @@ config = None
 session_manager = None
 file_manager = None
 
-# Modern minimalist HTML with styled input
+# Modern minimalist HTML with styled input and file delivery
 INDEX_HTML = '''<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -271,6 +272,50 @@ INDEX_HTML = '''<!DOCTYPE html>
             color: var(--text-muted);
         }
 
+        /* File item with download button */
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .file-name {
+            font-family: monospace;
+            font-size: 0.75rem;
+            cursor: pointer;
+            color: var(--accent);
+        }
+
+        .file-name:hover {
+            text-decoration: underline;
+        }
+
+        .download-btn {
+            background: var(--accent-soft);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.2rem 0.6rem;
+            font-size: 0.65rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: var(--transition);
+        }
+
+        .download-btn:hover {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .batch-download {
+            margin-top: 0.75rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--border);
+            text-align: right;
+        }
+
         /* Chat Page - Fixed layout with input at bottom */
         .chat-page {
             height: 100%;
@@ -331,9 +376,26 @@ INDEX_HTML = '''<!DOCTYPE html>
             font-size: 0.7rem;
         }
 
-        .message-content code {
-            font-family: monospace;
+        /* File attachment in chat */
+        .file-attachment {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            padding: 0.25rem 0.75rem;
+            margin-top: 0.5rem;
             font-size: 0.75rem;
+            border: 1px solid var(--border);
+        }
+
+        .file-attachment a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .file-attachment a:hover {
+            text-decoration: underline;
         }
 
         /* Styled Input Area */
@@ -410,7 +472,6 @@ INDEX_HTML = '''<!DOCTYPE html>
             transform: none;
         }
 
-        /* Send button icon */
         .send-icon {
             font-size: 1rem;
         }
@@ -638,6 +699,7 @@ INDEX_HTML = '''<!DOCTYPE html>
             .chat-input { font-size: 0.8rem; }
             .send-btn { padding: 0.5rem 1rem; }
             .input-wrapper { border-radius: 16px; }
+            .file-item { flex-wrap: wrap; gap: 0.5rem; }
         }
     </style>
 </head>
@@ -694,7 +756,7 @@ INDEX_HTML = '''<!DOCTYPE html>
             <div class="files-list">
                 <div class="section-header">
                     <h3>Created Files</h3>
-                    <button class="btn btn-danger" onclick="clearCreatedFiles()">Clear</button>
+                    <button class="btn btn-primary" id="download-all-btn" onclick="downloadAllFiles()" style="font-size:0.65rem;">Download All</button>
                 </div>
                 <div id="created-files-container">Loading...</div>
             </div>
@@ -707,7 +769,7 @@ INDEX_HTML = '''<!DOCTYPE html>
                     <span>terminal</span>
                 </div>
                 <div class="terminal-body" id="terminal-body">
-                    <div class="terminal-line">ZynoxAI Terminal v3.6.8</div>
+                    <div class="terminal-line">ZynoxAI Terminal v3.7.11</div>
                     <div class="terminal-line">---</div>
                 </div>
                 <div class="terminal-input-line">
@@ -717,7 +779,7 @@ INDEX_HTML = '''<!DOCTYPE html>
             </div>
         </div>
 
-        <!-- Chat Page - Fixed input at bottom with styled wrapper -->
+        <!-- Chat Page -->
         <div id="chat-page" class="chat-page hidden">
             <div class="chat-messages-container">
                 <div class="chat-messages" id="chat-messages">
@@ -776,7 +838,7 @@ INDEX_HTML = '''<!DOCTYPE html>
                 <div class="settings-title">About</div>
                 <div class="setting-item">
                     <span>Version</span>
-                    <span>3.6.8</span>
+                    <span>3.7.11</span>
                 </div>
                 <div class="setting-item">
                     <span>Author</span>
@@ -865,15 +927,42 @@ INDEX_HTML = '''<!DOCTYPE html>
 
         async function loadCreatedFiles() {
             try {
-                const res = await fetch(`${API_BASE}/api/created`);
+                const res = await fetch(`${API_BASE}/api/files/list`);
                 const data = await res.json();
                 const container = document.getElementById('created-files-container');
-                if (data.files && data.files !== 'No files created yet' && data.files !== 'Directory is empty') {
-                    container.innerHTML = `<div class="session-item"><pre style="white-space: pre-wrap; margin: 0;">${escapeHtml(data.files)}</pre></div>`;
+                if (data.files && data.files.length > 0) {
+                    let filesHtml = '';
+                    data.files.forEach(file => {
+                        const isDir = file.is_dir;
+                        const icon = isDir ? '📁' : '📄';
+                        filesHtml += `
+                            <div class="file-item">
+                                <span class="file-name" onclick="downloadFile('${file.path}')">${icon} ${escapeHtml(file.name)}</span>
+                                <button class="download-btn" onclick="downloadFile('${file.path}')">Download</button>
+                            </div>
+                        `;
+                    });
+                    container.innerHTML = filesHtml;
                 } else {
-                    container.innerHTML = '<div class="session-item">No files</div>';
+                    container.innerHTML = '<div class="file-item">No files created yet</div>';
                 }
             } catch(e) { console.error(e); }
+        }
+
+        async function downloadFile(filepath) {
+            try {
+                window.open(`${API_BASE}/api/files/download?path=${encodeURIComponent(filepath)}`, '_blank');
+            } catch(e) {
+                alert('Download failed: ' + e.message);
+            }
+        }
+
+        async function downloadAllFiles() {
+            try {
+                window.open(`${API_BASE}/api/files/download-all`, '_blank');
+            } catch(e) {
+                alert('Download failed: ' + e.message);
+            }
         }
 
         async function loadSettings() {
@@ -989,8 +1078,9 @@ INDEX_HTML = '''<!DOCTYPE html>
         }
 
         let isWaiting = false;
-        let currentStreamMessageDiv = null;
-        let streamedText = '';
+
+        // Store created files from last response
+        let lastCreatedFiles = [];
 
         async function sendMessage() {
             const input = document.getElementById('chat-input');
@@ -1004,6 +1094,7 @@ INDEX_HTML = '''<!DOCTYPE html>
             input.style.height = 'auto';
             sendBtn.disabled = true;
             isWaiting = true;
+            lastCreatedFiles = [];
 
             showThinking();
 
@@ -1019,6 +1110,15 @@ INDEX_HTML = '''<!DOCTYPE html>
                 
                 if (data.response) {
                     await typewriterEffect(data.response);
+                    
+                    // Check for created files after response
+                    if (data.created_files && data.created_files.length > 0) {
+                        lastCreatedFiles = data.created_files;
+                        addFileAttachments(lastCreatedFiles);
+                    } else {
+                        // Also refresh file list to detect any created files
+                        await loadCreatedFiles();
+                    }
                 } else if (data.error) {
                     addMessage('ai', 'Error: ' + data.error);
                 }
@@ -1029,6 +1129,43 @@ INDEX_HTML = '''<!DOCTYPE html>
                 sendBtn.disabled = false;
                 isWaiting = false;
             }
+        }
+
+        function addFileAttachments(files) {
+            if (!files || files.length === 0) return;
+            
+            const messagesDiv = document.getElementById('chat-messages');
+            const lastMessage = messagesDiv.lastChild;
+            
+            if (lastMessage && lastMessage.classList && lastMessage.classList.contains('message') && lastMessage.classList.contains('ai')) {
+                // Add attachments to the last AI message
+                const contentDiv = lastMessage.querySelector('.message-content');
+                if (contentDiv) {
+                    const attachmentDiv = document.createElement('div');
+                    attachmentDiv.className = 'file-attachment';
+                    attachmentDiv.innerHTML = '📎 ' + files.map(f => 
+                        `<a href="#" onclick="downloadFile('${f.path}'); return false;">${escapeHtml(f.name)}</a>`
+                    ).join(', ');
+                    contentDiv.appendChild(attachmentDiv);
+                }
+            } else {
+                // Create a new message with attachments
+                const attachmentText = 'Files created: ' + files.map(f => f.name).join(', ');
+                addMessage('ai', attachmentText);
+                const lastMsg = messagesDiv.lastChild;
+                if (lastMsg) {
+                    const contentDiv = lastMsg.querySelector('.message-content');
+                    if (contentDiv) {
+                        const downloadLinks = files.map(f => 
+                            `<a href="#" onclick="downloadFile('${f.path}'); return false;">📄 ${escapeHtml(f.name)}</a>`
+                        ).join(' ');
+                        contentDiv.innerHTML += '<div class="file-attachment">' + downloadLinks + '</div>';
+                    }
+                }
+            }
+            
+            // Refresh file list in dashboard
+            loadCreatedFiles();
         }
 
         async function typewriterEffect(text) {
@@ -1107,6 +1244,7 @@ INDEX_HTML = '''<!DOCTYPE html>
                     termBody.innerHTML += `<div class="terminal-line" style="color: #f59e0b;">${escapeHtml(data.stderr)}</div>`;
                 }
                 termBody.scrollTop = termBody.scrollHeight;
+                await loadCreatedFiles();
             } catch(e) {
                 termBody.innerHTML += `<div class="terminal-line" style="color: #ef4444;">Error</div>`;
             }
@@ -1176,14 +1314,23 @@ def create_app():
             'provider': zynox.current_provider,
             'environment': zynox.environment,
             'package_manager': zynox.package_manager,
-            'version': '3.6.8'
+            'version': '3.7.11'
         })
     
     @app.route('/api/chat', methods=['POST'])
     def api_chat():
-        """Chat endpoint"""
+        """Chat endpoint that returns created files info"""
         data = request.json
         user_msg = data.get('message', '')
+        
+        # Track files before execution
+        create_dir = Config.get_create_dir()
+        files_before = set()
+        if os.path.exists(create_dir):
+            for root, dirs, files in os.walk(create_dir):
+                for file in files:
+                    rel_path = os.path.relpath(os.path.join(root, file), create_dir)
+                    files_before.add(rel_path)
         
         output_buffer = io.StringIO()
         
@@ -1203,7 +1350,87 @@ def create_app():
         if not result or len(result.strip()) == 0:
             result = "Task completed"
         
-        return jsonify({'response': result})
+        # Detect newly created files
+        created_files = []
+        if os.path.exists(create_dir):
+            for root, dirs, files in os.walk(create_dir):
+                for file in files:
+                    rel_path = os.path.relpath(os.path.join(root, file), create_dir)
+                    if rel_path not in files_before:
+                        created_files.append({
+                            'name': file,
+                            'path': rel_path,
+                            'size': os.path.getsize(os.path.join(root, file))
+                        })
+        
+        return jsonify({
+            'response': result,
+            'created_files': created_files
+        })
+    
+    @app.route('/api/files/list')
+    def api_files_list():
+        """List all created files with metadata"""
+        create_dir = Config.get_create_dir()
+        files = []
+        
+        def scan_directory(path, relative_path=""):
+            try:
+                for item in os.listdir(path):
+                    item_path = os.path.join(path, item)
+                    rel_path = os.path.join(relative_path, item) if relative_path else item
+                    if os.path.isdir(item_path):
+                        files.append({
+                            'name': item,
+                            'path': rel_path,
+                            'is_dir': True,
+                            'size': 0
+                        })
+                        scan_directory(item_path, rel_path)
+                    else:
+                        size = os.path.getsize(item_path)
+                        files.append({
+                            'name': item,
+                            'path': rel_path,
+                            'is_dir': False,
+                            'size': size
+                        })
+            except Exception as e:
+                print(f"Error scanning: {e}")
+        
+        if os.path.exists(create_dir):
+            scan_directory(create_dir)
+        
+        return jsonify({'files': files})
+    
+    @app.route('/api/files/download')
+    def api_file_download():
+        """Download a single file"""
+        filepath = request.args.get('path', '')
+        create_dir = Config.get_create_dir()
+        full_path = os.path.join(create_dir, filepath)
+        
+        if not os.path.exists(full_path) or os.path.isdir(full_path):
+            return jsonify({'error': 'File not found'}), 404
+        
+        return send_file(full_path, as_attachment=True, download_name=os.path.basename(full_path))
+    
+    @app.route('/api/files/download-all')
+    def api_files_download_all():
+        """Download all created files as ZIP"""
+        create_dir = Config.get_create_dir()
+        zip_buffer = io.BytesIO()
+        
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            if os.path.exists(create_dir):
+                for root, dirs, files in os.walk(create_dir):
+                    for file in files:
+                        file_path = os.path.join(root, file)
+                        arcname = os.path.relpath(file_path, create_dir)
+                        zip_file.write(file_path, arcname)
+        
+        zip_buffer.seek(0)
+        return send_file(zip_buffer, as_attachment=True, download_name='zynoxai_created_files.zip', mimetype='application/zip')
     
     @app.route('/api/sessions')
     def api_sessions():

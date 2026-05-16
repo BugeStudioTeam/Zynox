@@ -5,6 +5,7 @@ import os
 from ...constants import PACKAGE_MAP
 from ...utils.helpers import detect_environment, get_package_manager, get_install_command
 from ...utils.colors import green, red, yellow, cyan
+from ...config import Config
 
 class SmartInstaller:
     """Smart installation of missing packages"""
@@ -13,6 +14,7 @@ class SmartInstaller:
         self.environment = detect_environment()
         self.package_manager = get_package_manager()
         self.package_cache = {}
+        self.create_dir = Config.get_create_dir()
     
     def is_installed(self, cmd_name: str) -> bool:
         """Check if a command is already installed"""
