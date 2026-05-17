@@ -72,7 +72,7 @@ class CommandExecutor:
                 shell=True, 
                 capture_output=True, 
                 text=True, 
-                timeout=180,
+                timeout=600,
                 executable='/bin/bash',
                 cwd=self.create_dir
             )
@@ -92,7 +92,7 @@ class CommandExecutor:
                 return result.stdout, result.stderr
                 
         except subprocess.TimeoutExpired:
-            print(red("[Command timeout after 180 seconds]"))
+            print(red("[Command timeout after 600 seconds]"))
             os.chdir(original_cwd)
             return None, "Timeout"
         except subprocess.CalledProcessError as e:

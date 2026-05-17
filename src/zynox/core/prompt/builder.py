@@ -1,47 +1,30 @@
-"""Prompt builder for AI requests"""
+"""Prompt builder for AI requests - Updated for step-by-step"""
+
+import os
+from .templates import load_rules, build_initial_prompt, build_step_prompt
 
 class PromptBuilder:
     """Build prompts for AI requests"""
     
     @staticmethod
+    def get_rules() -> str:
+        """Get execution rules"""
+        return load_rules()
+    
+    @staticmethod
+    def create_initial_prompt(user_input: str, context: str = "", file_list: str = "") -> str:
+        """Create initial prompt for first step"""
+        env_info = f"\n[Environment: {os.environ.get('TERMUX_VERSION', 'Linux')}]\n"
+        file_list_section = f"\nCurrent Directory Files:\n{file_list[:1000]}\n" if file_list else ""
+        
+        return build_initial_prompt(user_input, env_info + file_list_section + context)
+    
+    @staticmethod
+    def create_step_prompt(user_input: str, step_result: str, context: str = "", step_number: int = 1) -> str:
+        """Create prompt for subsequent steps"""
+        return build_step_prompt(user_input, step_result, context, step_number)
+    
+    @staticmethod
     def create_prompt(user_input: str, context: str = "", file_list: str = "") -> str:
-        """Create a prompt for the AI"""
-        context_section = ""
-        if context:
-            if len(context) > 2000:
-                context = context[:2000] + "\n... (truncated)"
-            context_section = f"""
-File Content Reference:
-{context}
-
-"""
-        
-        file_list_section = ""
-        if file_list:
-            file_list_section = f"""
-Current Directory Files:
-{file_list[:1000]}
-
-"""
-        
-        return f"""You are ZynoxAI, a file/folder creation assistant. Based on the user's request, generate a JSON response with actions to create files or folders.
-
-{file_list_section}{context_section}
-Rules:
-1. ONLY output valid JSON, no other text.
-2. For folders: {{"type": "folder", "path": "folder_name"}}
-3. For files: {{"type": "file", "path": "file_name", "content": "file_content_here"}}
-4. If multiple items: {{"actions": [action1, action2, ...]}}
-5. Use appropriate file extensions (.py, .txt, .js, .html, .json, etc.)
-6. For code files, provide meaningful code content
-7. Paths can include nested directories (e.g., "src/main.py")
-8. Use forward slashes for paths
-
-User request: {user_input}
-
-Response format examples:
-- Single file: {{"type": "file", "path": "hello.py", "content": "print('Hello World')\\n"}}
-- Single folder: {{"type": "folder", "path": "my_project"}}
-- Multiple: {{"actions": [{{"type": "folder", "path": "src"}}, {{"type": "file", "path": "src/main.py", "content": "# Main file"}}]}}
-
-Generate JSON response:"""
+        """Legacy method for backward compatibility"""
+        return PromptBuilder.create_initial_prompt(user_input, context, file_list)

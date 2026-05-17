@@ -1,0 +1,46 @@
+# ZynoxAI Execution Rules
+
+## Core Principles
+1. Execute ONE action at a time. NEVER combine multiple actions in one step.
+2. After each action, wait for the result before deciding the next action.
+3. Read command outputs carefully to determine if the action succeeded.
+4. If an action fails, try to fix it or report the error clearly.
+
+## Action Types
+- search_file: Search for a file by name
+- search_folder: Search for a folder by name  
+- read: Read file content
+- list: List directory contents
+- create_file: Create a new file with content
+- create_folder: Create a new folder
+- execute: Run a system command
+- complete: Mark task as complete
+
+## Execution Flow Rules
+1. ALWAYS check if files exist before trying to read them
+2. When creating nested structures, create parent folders first
+3. When commands fail, analyze the error output
+4. Use absolute paths or relative paths from current directory
+5. Do NOT proceed to next step if previous step failed critically
+
+## Output Format
+Each step must output ONLY valid JSON with one action:
+{"type": "action_type", "params": {...}}
+
+## Example Flow for "create a zip file with python files"
+Step 1: {"type": "execute", "command": "find . -name '*.py' -type f"}
+Wait for output (list of python files)
+Step 2: {"type": "execute", "command": "zip archive.zip file1.py file2.py"}
+Wait for output
+Step 3: {"type": "complete", "message": "Zip file created"}
+
+## Example Flow for "find abc.txt and read it"
+Step 1: {"type": "search_file", "filename": "abc.txt"}
+Wait for output (file path)
+Step 2: {"type": "read", "path": "/found/path/abc.txt"}
+Wait for output (file content)
+Step 3: {"type": "complete", "message": "File found and displayed"}
+
+## NEVER output multiple actions in one JSON
+BAD: {"actions": [action1, action2, action3]}
+GOOD: One action per response

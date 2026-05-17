@@ -13,6 +13,7 @@ from .utils.colors import print_logo, print_about, green, red, yellow, cyan, mag
 from .utils.helpers import detect_environment, get_package_manager
 from .memory.session import SessionManager
 from .core.ai_providers.factory import AIProviderFactory
+from .core.prompt.builder import PromptBuilder
 from .core.command.executor import CommandExecutor
 from .core.file.manager import FileManager
 from .core.file.search import FileSearcher
@@ -162,7 +163,7 @@ JSON:"""
         return True
     
     def run(self, user_input: str, provider: str = None, model: str = None, base_path: str = ".") -> bool:
-        """Main execution"""
+        """Main execution - original mode"""
         if not user_input:
             return False
         
@@ -202,6 +203,23 @@ JSON:"""
             print(yellow("[Task may not be complete]"))
         
         return success
+    
+    def run_step_by_step(self, user_input: str, provider: str = None, model: str = None, base_path: str = ".") -> bool:
+        """Run task with step-by-step execution"""
+        if not user_input:
+            return False
+        
+        if provider:
+            self.current_provider = provider
+        if model:
+            self.config.set_default_model(model)
+        
+        self.memory.add_message("user", user_input)
+        
+        from .core.executor.step_executor import StepExecutor
+        executor = StepExecutor(self)
+        
+        return executor.run(user_input, base_path)
 
 
 def main():
@@ -227,16 +245,14 @@ Examples:
   zynox --about
   zynox --telegram-bot YOUR_TOKEN
   zynox --web                    # Start web server on port 5000
-  zynox --web --port 8080        # Start web server on port 8080
-  zynox --web --host 0.0.0.0     # Allow external access
+  zynox --step "create a zip file with python files"  # Step-by-step execution
 
 # Execute Linux commands
   zynox "list all files"
   zynox "show disk usage"
   zynox "display current directory"
-  zynox "show me what's in this folder"
 
-Note: All created files are saved in ~/ZynoxAI/output/create/
+Note: All created files are saved in ~/ZynoxAI/output/workspace/
         """
     )
     
@@ -269,6 +285,9 @@ Note: All created files are saved in ~/ZynoxAI/output/create/
     parser.add_argument("--web", action="store_true", help="Start web server")
     parser.add_argument("--host", default="0.0.0.0", help="Web server host (default: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=5000, help="Web server port (default: 5000)")
+    
+    # Step-by-step execution
+    parser.add_argument("--step", action="store_true", help="Step-by-step execution mode (recommended for complex tasks)")
     
     # Execution options
     parser.add_argument("input", nargs="?", help="Your request")
@@ -342,7 +361,7 @@ Note: All created files are saved in ~/ZynoxAI/output/create/
         if session.load_session(args.load_session):
             print(green(f"[Loaded session: {args.load_session}]"))
         else:
-            print(red(f("[Session not found: {args.load_session}]")))
+            print(red(f"[Session not found: {args.load_session}]"))
         sys.exit(0)
     if args.delete_session:
         if session.delete_session(args.delete_session):
@@ -386,7 +405,7 @@ Note: All created files are saved in ~/ZynoxAI/output/create/
         print(f"API Keys: {', '.join(config.data.get('api_keys', {}).keys())}")
         print(f"Environment: {detect_environment().upper()}")
         print(f"Package Manager: {get_package_manager()}")
-        print(f"Created Files Directory: {Config.get_create_dir()}")
+        print(f"Workspace Directory: {Config.get_create_dir()}")
         sys.exit(0)
     
     # Execute main command
@@ -394,7 +413,13 @@ Note: All created files are saved in ~/ZynoxAI/output/create/
         parser.print_help()
         sys.exit(1)
     
-    success = zynox.run(args.input, args.provider, args.model, args.dir)
+    # Choose execution mode
+    if args.step:
+        print(cyan("\n[Step-by-Step Mode Enabled]"))
+        success = zynox.run_step_by_step(args.input, args.provider, args.model, args.dir)
+    else:
+        success = zynox.run(args.input, args.provider, args.model, args.dir)
+    
     sys.exit(0 if success else 1)
 
 

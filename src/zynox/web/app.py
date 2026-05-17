@@ -1,4 +1,4 @@
-"""Flask web application for ZynoxAI - Modern minimalist design with file delivery"""
+"""Flask web application for ZynoxAI - Complete with stop functionality"""
 
 import os
 import sys
@@ -6,8 +6,11 @@ import json
 import subprocess
 import io
 import zipfile
+import time
+import threading
+import signal
 from pathlib import Path
-from flask import Flask, render_template, request, jsonify, send_file, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_file, Response, stream_with_context
 from contextlib import redirect_stdout
 
 # Add parent to path
@@ -35,7 +38,13 @@ config = None
 session_manager = None
 file_manager = None
 
-# Modern minimalist HTML with styled input and file delivery
+# Global current directory for terminal
+global_cwd = os.path.expanduser("~")
+
+# Global stop flag for current task
+stop_task_flag = False
+
+# Complete HTML template
 INDEX_HTML = '''<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -62,6 +71,8 @@ INDEX_HTML = '''<!DOCTYPE html>
             --accent: #3b82f6;
             --accent-hover: #2563eb;
             --accent-glow: rgba(59, 130, 246, 0.3);
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
             --border: #2a2a35;
             --border-light: #2a2a35;
             --success: #10b981;
@@ -85,6 +96,8 @@ INDEX_HTML = '''<!DOCTYPE html>
                 --border-light: #cbd5e1;
                 --accent: #3b82f6;
                 --accent-hover: #2563eb;
+                --danger: #ef4444;
+                --danger-hover: #dc2626;
                 --terminal-text: #10b981;
             }
         }
@@ -181,7 +194,6 @@ INDEX_HTML = '''<!DOCTYPE html>
             flex-direction: column;
         }
 
-        /* Dashboard page scrollable */
         .dashboard-page {
             height: 100%;
             overflow-y: auto;
@@ -272,7 +284,6 @@ INDEX_HTML = '''<!DOCTYPE html>
             color: var(--text-muted);
         }
 
-        /* File item with download button */
         .file-item {
             display: flex;
             justify-content: space-between;
@@ -309,14 +320,6 @@ INDEX_HTML = '''<!DOCTYPE html>
             border-color: var(--accent);
         }
 
-        .batch-download {
-            margin-top: 0.75rem;
-            padding-top: 0.5rem;
-            border-top: 1px solid var(--border);
-            text-align: right;
-        }
-
-        /* Chat Page - Fixed layout with input at bottom */
         .chat-page {
             height: 100%;
             display: flex;
@@ -351,6 +354,10 @@ INDEX_HTML = '''<!DOCTYPE html>
             border-radius: 18px 18px 4px 18px;
         }
 
+        .message.ai {
+            justify-content: flex-start;
+        }
+
         .message.ai .message-content {
             background: var(--bg-tertiary);
             border: 1px solid var(--border);
@@ -376,29 +383,129 @@ INDEX_HTML = '''<!DOCTYPE html>
             font-size: 0.7rem;
         }
 
-        /* File attachment in chat */
-        .file-attachment {
-            display: inline-flex;
+        .file-delivery {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            justify-content: flex-start;
+        }
+
+        .file-delivery-content {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 18px 18px 18px 4px;
+            padding: 0.7rem 1rem;
+            max-width: 80%;
+        }
+
+        .file-delivery-header {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            display: flex;
             align-items: center;
             gap: 0.5rem;
-            background: var(--bg-primary);
-            border-radius: 8px;
-            padding: 0.25rem 0.75rem;
-            margin-top: 0.5rem;
-            font-size: 0.75rem;
-            border: 1px solid var(--border);
         }
 
-        .file-attachment a {
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .file-delivery-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border-light);
+            transition: var(--transition);
+        }
+
+        .file-delivery-item:hover {
+            border-color: var(--accent);
+            background: var(--accent-soft);
+        }
+
+        .file-icon {
+            font-size: 1.25rem;
+        }
+
+        .file-info {
+            flex: 1;
+        }
+
+        .file-name-link {
+            font-family: monospace;
+            font-size: 0.8rem;
             color: var(--accent);
             text-decoration: none;
+            font-weight: 500;
         }
 
-        .file-attachment a:hover {
+        .file-name-link:hover {
             text-decoration: underline;
         }
 
-        /* Styled Input Area */
+        .file-size {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            margin-top: 0.125rem;
+        }
+
+        .download-single-btn {
+            background: var(--accent);
+            border: none;
+            border-radius: 8px;
+            padding: 0.25rem 0.75rem;
+            color: white;
+            font-size: 0.65rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .download-single-btn:hover {
+            background: var(--accent-hover);
+            transform: scale(0.98);
+        }
+
+        .download-folder-btn {
+            background: var(--accent);
+            border: none;
+            border-radius: 8px;
+            padding: 0.25rem 0.75rem;
+            color: white;
+            font-size: 0.65rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .download-folder-btn:hover {
+            background: var(--accent-hover);
+            transform: scale(0.98);
+        }
+
+        .download-all-btn {
+            background: var(--accent-soft);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.3rem 1rem;
+            color: var(--text-primary);
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-top: 0.5rem;
+            width: fit-content;
+        }
+
+        .download-all-btn:hover {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
         .chat-input-area {
             position: sticky;
             bottom: 0;
@@ -472,11 +579,18 @@ INDEX_HTML = '''<!DOCTYPE html>
             transform: none;
         }
 
+        .send-btn.stop {
+            background: var(--danger);
+        }
+
+        .send-btn.stop:hover {
+            background: var(--danger-hover);
+        }
+
         .send-icon {
             font-size: 1rem;
         }
 
-        /* Streaming cursor */
         .streaming-cursor {
             display: inline-block;
             width: 2px;
@@ -514,7 +628,6 @@ INDEX_HTML = '''<!DOCTYPE html>
             40% { transform: scale(1); }
         }
 
-        /* Settings page */
         .settings-page {
             height: 100%;
             overflow-y: auto;
@@ -605,21 +718,11 @@ INDEX_HTML = '''<!DOCTYPE html>
 
         .terminal-header {
             background: var(--bg-tertiary);
-            padding: 0.4rem 0.8rem;
-            display: flex;
-            gap: 0.5rem;
-            align-items: center;
+            padding: 0.5rem 1rem;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
         }
-
-        .terminal-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-        }
-
-        .terminal-dot.red { background: #ff5f56; }
-        .terminal-dot.yellow { background: #ffbd2e; }
-        .terminal-dot.green { background: #27c93f; }
 
         .terminal-body {
             padding: 0.8rem;
@@ -699,7 +802,8 @@ INDEX_HTML = '''<!DOCTYPE html>
             .chat-input { font-size: 0.8rem; }
             .send-btn { padding: 0.5rem 1rem; }
             .input-wrapper { border-radius: 16px; }
-            .file-item { flex-wrap: wrap; gap: 0.5rem; }
+            .file-delivery-content { max-width: 90%; }
+            .file-delivery-item { flex-wrap: wrap; }
         }
     </style>
 </head>
@@ -720,163 +824,70 @@ INDEX_HTML = '''<!DOCTYPE html>
     </header>
 
     <main class="container">
-        <!-- Dashboard Page -->
         <div id="dashboard-page" class="dashboard-page">
             <div class="dashboard-stats">
-                <div class="stat-card">
-                    <div class="stat-title">Status</div>
-                    <div class="stat-value" id="stat-status">---</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-title">Provider</div>
-                    <div class="stat-value" id="stat-provider">-</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-title">Environment</div>
-                    <div class="stat-value" id="stat-env">-</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-title">Package Manager</div>
-                    <div class="stat-value" id="stat-pm">-</div>
-                </div>
+                <div class="stat-card"><div class="stat-title">Status</div><div class="stat-value" id="stat-status">---</div></div>
+                <div class="stat-card"><div class="stat-title">Provider</div><div class="stat-value" id="stat-provider">-</div></div>
+                <div class="stat-card"><div class="stat-title">Environment</div><div class="stat-value" id="stat-env">-</div></div>
+                <div class="stat-card"><div class="stat-title">Package Manager</div><div class="stat-value" id="stat-pm">-</div></div>
             </div>
 
             <div class="sessions-list">
-                <div class="section-header">
-                    <h3>Saved Sessions</h3>
-                    <div class="flex">
-                        <button class="btn btn-primary" onclick="newSession()">New</button>
-                        <button class="btn btn-secondary" onclick="clearMemory()">Clear</button>
-                        <button class="btn btn-secondary" onclick="loadSessions()">↻</button>
-                    </div>
-                </div>
+                <div class="section-header"><h3>Saved Sessions</h3><div class="flex"><button class="btn btn-primary" onclick="newSession()">New</button><button class="btn btn-secondary" onclick="clearMemory()">Clear</button><button class="btn btn-secondary" onclick="loadSessions()">↻</button></div></div>
                 <div id="sessions-container">Loading...</div>
             </div>
 
             <div class="files-list">
-                <div class="section-header">
-                    <h3>Created Files</h3>
-                    <button class="btn btn-primary" id="download-all-btn" onclick="downloadAllFiles()" style="font-size:0.65rem;">Download All</button>
-                </div>
+                <div class="section-header"><h3>Created Files</h3><button class="btn btn-primary" onclick="downloadAllFiles()" style="font-size:0.65rem;">Download All</button></div>
                 <div id="created-files-container">Loading...</div>
             </div>
 
             <div class="terminal">
-                <div class="terminal-header">
-                    <div class="terminal-dot red"></div>
-                    <div class="terminal-dot yellow"></div>
-                    <div class="terminal-dot green"></div>
-                    <span>terminal</span>
-                </div>
-                <div class="terminal-body" id="terminal-body">
-                    <div class="terminal-line">ZynoxAI Terminal v3.7.11</div>
-                    <div class="terminal-line">---</div>
-                </div>
-                <div class="terminal-input-line">
-                    <span class="terminal-prompt">$</span>
-                    <input type="text" class="terminal-input" id="terminal-input" placeholder="ls, pwd, echo...">
-                </div>
+                <div class="terminal-header">terminal</div>
+                <div class="terminal-body" id="terminal-body"><div class="terminal-line">ZynoxAI Terminal v3.6.8</div><div class="terminal-line">Type commands below (cd, ls, pwd, etc.)</div><div class="terminal-line">---</div></div>
+                <div class="terminal-input-line"><span class="terminal-prompt">$</span><input type="text" class="terminal-input" id="terminal-input" placeholder="cd .., ls -la, pwd..."></div>
             </div>
         </div>
 
-        <!-- Chat Page -->
         <div id="chat-page" class="chat-page hidden">
-            <div class="chat-messages-container">
-                <div class="chat-messages" id="chat-messages">
-                    <div class="message ai">
-                        <div class="message-content">
-                            ZynoxAI ready.<br><br>
-                            Examples:<br>
-                            • "create a python file called hello.py with print('Hello')"<br>
-                            • "find abc.txt and read it"<br>
-                            • "list all files"
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="chat-input-area">
-                <div class="input-wrapper">
-                    <textarea class="chat-input" id="chat-input" placeholder="Describe what you want..." rows="1"></textarea>
-                    <button class="send-btn" id="send-btn" onclick="sendMessage()">
-                        <span class="send-icon">→</span>
-                    </button>
-                </div>
-            </div>
+            <div class="chat-messages-container"><div class="chat-messages" id="chat-messages"><div class="message ai"><div class="message-content">ZynoxAI ready.<br><br>Examples:<br>• "create a python file called hello.py with print('Hello')"<br>• "find abc.txt and read it"<br>• "list all files"</div></div></div></div>
+            <div class="chat-input-area"><div class="input-wrapper"><textarea class="chat-input" id="chat-input" placeholder="Describe what you want..." rows="1"></textarea><button class="send-btn" id="send-btn" onclick="sendMessage()"><span class="send-icon">→</span></button></div></div>
         </div>
 
-        <!-- Settings Page -->
         <div id="settings-page" class="settings-page hidden">
-            <div class="settings-section">
-                <div class="settings-title">AI Provider</div>
-                <div class="setting-item">
-                    <span class="setting-label">Default Provider</span>
-                    <select id="provider-select">
-                        <option value="openai">OpenAI</option>
-                        <option value="gemini">Gemini</option>
-                        <option value="grok">Grok</option>
-                        <option value="deepseek">DeepSeek</option>
-                    </select>
-                </div>
-                <div class="setting-item">
-                    <span class="setting-label">Default Model</span>
-                    <input type="text" id="model-input" placeholder="e.g., deepseek-chat">
-                </div>
-                <div style="margin-top: 0.75rem;">
-                    <button class="btn btn-primary" onclick="saveSettings()">Save</button>
-                </div>
-            </div>
-
-            <div class="settings-section">
-                <div class="settings-title">API Keys</div>
-                <div id="api-keys-container"></div>
-                <div class="text-muted" style="margin-top: 0.75rem; padding: 0.5rem;">
-                    Keys stored locally
-                </div>
-            </div>
-
-            <div class="settings-section">
-                <div class="settings-title">About</div>
-                <div class="setting-item">
-                    <span>Version</span>
-                    <span>3.7.11</span>
-                </div>
-                <div class="setting-item">
-                    <span>Author</span>
-                    <span>Buge Studio</span>
-                </div>
-                <div class="setting-item">
-                    <span>GitHub</span>
-                    <a href="https://github.com/BugeStudioTeam/Zynox" style="color: var(--accent); text-decoration: none;">repo</a>
-                </div>
-            </div>
+            <div class="settings-section"><div class="settings-title">AI Provider</div><div class="setting-item"><span class="setting-label">Default Provider</span><select id="provider-select"><option value="openai">OpenAI</option><option value="gemini">Gemini</option><option value="grok">Grok</option><option value="deepseek">DeepSeek</option></select></div><div class="setting-item"><span class="setting-label">Default Model</span><input type="text" id="model-input" placeholder="e.g., deepseek-chat"></div><div style="margin-top: 0.75rem;"><button class="btn btn-primary" onclick="saveSettings()">Save</button></div></div>
+            <div class="settings-section"><div class="settings-title">API Keys</div><div id="api-keys-container"></div><div class="text-muted" style="margin-top: 0.75rem; padding: 0.5rem;">Keys stored locally</div></div>
+            <div class="settings-section"><div class="settings-title">About</div><div class="setting-item"><span>Version</span><span>3.6.8</span></div><div class="setting-item"><span>Author</span><span>Buge Studio</span></div><div class="setting-item"><span>GitHub</span><a href="https://github.com/BugeStudioTeam/Zynox" style="color: var(--accent); text-decoration: none;">repo</a></div></div>
         </div>
     </main>
 
     <script>
         const API_BASE = '';
+        let currentDirectory = '';
+        let terminalHistory = [];
+        let historyIndex = -1;
+        let isStreaming = false;
+        let currentAbortController = null;
 
-        // Auto-resize textarea
+        async function getCurrentDirectory() {
+            try {
+                const res = await fetch(`${API_BASE}/api/pwd`);
+                const data = await res.json();
+                currentDirectory = data.cwd;
+                return currentDirectory;
+            } catch(e) {
+                return '';
+            }
+        }
+
         const chatInput = document.getElementById('chat-input');
         if (chatInput) {
-            chatInput.addEventListener('input', function() {
-                this.style.height = 'auto';
-                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-            });
-            chatInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                }
-            });
+            chatInput.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 120) + 'px'; });
+            chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
         }
 
         document.querySelectorAll('.nav-link').forEach(link => {
-            link.addEventListener('click', (e) => {
-                const page = link.getAttribute('data-page');
-                showPage(page);
-                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-                link.classList.add('active');
-            });
+            link.addEventListener('click', (e) => { const page = link.getAttribute('data-page'); showPage(page); document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); link.classList.add('active'); });
         });
 
         function showPage(page) {
@@ -889,286 +900,171 @@ INDEX_HTML = '''<!DOCTYPE html>
         }
 
         async function loadDashboard() {
-            try {
-                const res = await fetch(`${API_BASE}/api/status`);
-                const data = await res.json();
-                document.getElementById('stat-status').innerHTML = '<span style="color: #10b981;">● Running</span>';
-                document.getElementById('stat-provider').innerText = data.provider || '-';
-                document.getElementById('stat-env').innerText = data.environment || '-';
-                document.getElementById('stat-pm').innerText = data.package_manager || '-';
-            } catch(e) { console.error(e); }
+            try { const res = await fetch(`${API_BASE}/api/status`); const data = await res.json(); document.getElementById('stat-status').innerHTML = '<span style="color: #10b981;">● Running</span>'; document.getElementById('stat-provider').innerText = data.provider || '-'; document.getElementById('stat-env').innerText = data.environment || '-'; document.getElementById('stat-pm').innerText = data.package_manager || '-'; } catch(e) { console.error(e); }
             await loadSessions();
             await loadCreatedFiles();
+            await getCurrentDirectory();
         }
 
         async function loadSessions() {
-            try {
-                const res = await fetch(`${API_BASE}/api/sessions`);
-                const data = await res.json();
-                const container = document.getElementById('sessions-container');
-                if (data.sessions && data.sessions.length > 0) {
-                    container.innerHTML = data.sessions.map(s => `
-                        <div class="session-item">
-                            <div onclick="loadSession('${s.id}')">
-                                <div class="session-id">${escapeHtml(s.id)}</div>
-                                <div class="session-date">${escapeHtml(s.created || 'Unknown')} | ${s.message_count}</div>
-                            </div>
-                            <div class="flex">
-                                <button class="btn btn-secondary" onclick="loadSession('${s.id}')">Load</button>
-                                <button class="btn btn-danger" onclick="deleteSession('${s.id}')">Del</button>
-                            </div>
-                        </div>
-                    `).join('');
-                } else {
-                    container.innerHTML = '<div class="session-item">No sessions</div>';
-                }
-            } catch(e) { console.error(e); }
+            try { const res = await fetch(`${API_BASE}/api/sessions`); const data = await res.json(); const container = document.getElementById('sessions-container'); if (data.sessions && data.sessions.length > 0) { container.innerHTML = data.sessions.map(s => `<div class="session-item"><div onclick="loadSession('${s.id}')"><div class="session-id">${escapeHtml(s.id)}</div><div class="session-date">${escapeHtml(s.created || 'Unknown')} | ${s.message_count}</div></div><div class="flex"><button class="btn btn-secondary" onclick="loadSession('${s.id}')">Load</button><button class="btn btn-danger" onclick="deleteSession('${s.id}')">Del</button></div></div>`).join(''); } else { container.innerHTML = '<div class="session-item">No sessions</div>'; } } catch(e) { console.error(e); }
         }
 
         async function loadCreatedFiles() {
-            try {
-                const res = await fetch(`${API_BASE}/api/files/list`);
-                const data = await res.json();
-                const container = document.getElementById('created-files-container');
-                if (data.files && data.files.length > 0) {
-                    let filesHtml = '';
-                    data.files.forEach(file => {
-                        const isDir = file.is_dir;
-                        const icon = isDir ? '📁' : '📄';
-                        filesHtml += `
-                            <div class="file-item">
-                                <span class="file-name" onclick="downloadFile('${file.path}')">${icon} ${escapeHtml(file.name)}</span>
-                                <button class="download-btn" onclick="downloadFile('${file.path}')">Download</button>
-                            </div>
-                        `;
-                    });
-                    container.innerHTML = filesHtml;
-                } else {
-                    container.innerHTML = '<div class="file-item">No files created yet</div>';
-                }
-            } catch(e) { console.error(e); }
+            try { const res = await fetch(`${API_BASE}/api/files/list`); const data = await res.json(); const container = document.getElementById('created-files-container'); if (data.files && data.files.length > 0) { let filesHtml = ''; data.files.forEach(file => { const isDir = file.is_dir; const icon = isDir ? '📁' : '📄'; const downloadUrl = isDir ? `/api/folder/download?path=${encodeURIComponent(file.path)}` : `/api/files/download?path=${encodeURIComponent(file.path)}`; filesHtml += `<div class="file-item"><span class="file-name" onclick="window.open('${downloadUrl}', '_blank')">${icon} ${escapeHtml(file.name)}</span><button class="download-btn" onclick="window.open('${downloadUrl}', '_blank')">Download</button></div>`; }); container.innerHTML = filesHtml; } else { container.innerHTML = '<div class="file-item">No files created yet</div>'; } } catch(e) { console.error(e); }
         }
 
-        async function downloadFile(filepath) {
-            try {
-                window.open(`${API_BASE}/api/files/download?path=${encodeURIComponent(filepath)}`, '_blank');
-            } catch(e) {
-                alert('Download failed: ' + e.message);
-            }
-        }
-
-        async function downloadAllFiles() {
-            try {
-                window.open(`${API_BASE}/api/files/download-all`, '_blank');
-            } catch(e) {
-                alert('Download failed: ' + e.message);
-            }
-        }
+        async function downloadAllFiles() { window.open(`${API_BASE}/api/files/download-all`, '_blank'); }
 
         async function loadSettings() {
+            try { const res = await fetch(`${API_BASE}/api/config`); const data = await res.json(); document.getElementById('provider-select').value = data.default_provider || 'openai'; document.getElementById('model-input').value = data.default_model || ''; const container = document.getElementById('api-keys-container'); const providers = ['openai', 'gemini', 'grok', 'deepseek']; container.innerHTML = providers.map(p => { const hasKey = data.api_keys && data.api_keys.includes(p); return `<div class="setting-item"><span class="setting-label">${p.toUpperCase()}</span><div class="flex"><input type="password" id="key-${p}" placeholder="API key" style="width: 180px;"><button class="btn btn-primary" onclick="updateApiKey('${p}')">Save</button><span class="text-muted">${hasKey ? '✓' : '—'}</span></div></div>`; }).join(''); } catch(e) { console.error(e); }
+        }
+
+        async function saveSettings() { const provider = document.getElementById('provider-select').value; const model = document.getElementById('model-input').value; try { await fetch(`${API_BASE}/api/config`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ default_provider: provider, default_model: model }) }); alert('Saved'); loadStatus(); } catch(e) { alert('Error: ' + e.message); } }
+        async function updateApiKey(provider) { const key = document.getElementById(`key-${provider}`).value; if (!key) return; const apiKeys = {}; apiKeys[provider] = key; try { await fetch(`${API_BASE}/api/config`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ api_keys: apiKeys }) }); alert(`${provider.toUpperCase()} key saved`); document.getElementById(`key-${provider}`).value = ''; loadSettings(); } catch(e) { alert('Error: ' + e.message); } }
+        async function loadSession(sessionId) { try { await fetch(`${API_BASE}/api/sessions/load`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: sessionId }) }); alert('Session loaded'); loadSessions(); } catch(e) { alert('Error: ' + e.message); } }
+        async function deleteSession(sessionId) { if (!confirm('Delete?')) return; try { await fetch(`${API_BASE}/api/sessions/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: sessionId }) }); alert('Deleted'); loadSessions(); } catch(e) { alert('Error: ' + e.message); } }
+        async function newSession() { try { await fetch(`${API_BASE}/api/sessions/new`, { method: 'POST' }); alert('New session'); loadSessions(); } catch(e) { alert('Error: ' + e.message); } }
+        async function clearMemory() { if (!confirm('Clear memory?')) return; try { await fetch(`${API_BASE}/api/sessions/clear`, { method: 'POST' }); alert('Cleared'); loadSessions(); } catch(e) { alert('Error: ' + e.message); } }
+        async function clearCreatedFiles() { if (!confirm('Delete all files?')) return; try { await fetch(`${API_BASE}/api/clear-created`, { method: 'POST' }); alert('Cleared'); loadCreatedFiles(); } catch(e) { alert('Error: ' + e.message); } }
+
+        function escapeHtml(text) { if (!text) return ''; return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+        function formatFileSize(bytes) { if (bytes === 0) return '0 B'; const k = 1024; const sizes = ['B', 'KB', 'MB', 'GB']; const i = Math.floor(Math.log(bytes) / Math.log(k)); return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]; }
+
+        async function stopTask() {
+            if (!isStreaming) return;
+            
             try {
-                const res = await fetch(`${API_BASE}/api/config`);
+                const response = await fetch(`${API_BASE}/api/stop`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    addMessage('ai', '⚠️ Task stopped by user');
+                    if (currentAbortController) {
+                        currentAbortController.abort();
+                        currentAbortController = null;
+                    }
+                    isStreaming = false;
+                    const sendBtn = document.getElementById('send-btn');
+                    sendBtn.disabled = false;
+                    sendBtn.classList.remove('stop');
+                    sendBtn.innerHTML = '<span class="send-icon">→</span>';
+                    const thinkingDiv = document.getElementById('thinking-indicator');
+                    if (thinkingDiv) thinkingDiv.remove();
+                }
+            } catch(e) {
+                console.error('Stop failed:', e);
+            }
+        }
+
+        // Terminal commands
+        async function executeCommand(cmd) {
+            const termBody = document.getElementById('terminal-body');
+            termBody.innerHTML += `<div class="terminal-line">$ ${escapeHtml(cmd)}</div>`;
+            termBody.scrollTop = termBody.scrollHeight;
+            
+            if (cmd.trim().startsWith('cd ')) {
+                const path = cmd.trim().substring(3);
+                try {
+                    const res = await fetch(`${API_BASE}/api/cd`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ path: path })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        currentDirectory = data.cwd;
+                        termBody.innerHTML += `<div class="terminal-line">Changed to: ${escapeHtml(data.cwd)}</div>`;
+                    } else {
+                        termBody.innerHTML += `<div class="terminal-line" style="color: #f59e0b;">Error: ${escapeHtml(data.error || 'Failed to change directory')}</div>`;
+                    }
+                } catch(e) {
+                    termBody.innerHTML += `<div class="terminal-line" style="color: #ef4444;">Error: ${escapeHtml(e.message)}</div>`;
+                }
+                termBody.scrollTop = termBody.scrollHeight;
+                terminalHistory.push(cmd);
+                historyIndex = terminalHistory.length;
+                return;
+            }
+
+            let cwd = currentDirectory;
+            if (!cwd) {
+                const pwdRes = await fetch(`${API_BASE}/api/pwd`);
+                const pwdData = await pwdRes.json();
+                cwd = pwdData.cwd;
+                currentDirectory = cwd;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/api/command`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: cmd, cwd: cwd })
+                });
                 const data = await res.json();
-                document.getElementById('provider-select').value = data.default_provider || 'openai';
-                document.getElementById('model-input').value = data.default_model || '';
-
-                const container = document.getElementById('api-keys-container');
-                const providers = ['openai', 'gemini', 'grok', 'deepseek'];
-                container.innerHTML = providers.map(p => {
-                    const hasKey = data.api_keys && data.api_keys.includes(p);
-                    return `
-                        <div class="setting-item">
-                            <span class="setting-label">${p.toUpperCase()}</span>
-                            <div class="flex">
-                                <input type="password" id="key-${p}" placeholder="API key" style="width: 180px;">
-                                <button class="btn btn-primary" onclick="updateApiKey('${p}')">Save</button>
-                                <span class="text-muted">${hasKey ? '✓' : '—'}</span>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            } catch(e) { console.error(e); }
+                if (data.stdout) termBody.innerHTML += `<div class="terminal-line">${escapeHtml(data.stdout)}</div>`;
+                if (data.stderr) termBody.innerHTML += `<div class="terminal-line" style="color: #f59e0b;">${escapeHtml(data.stderr)}</div>`;
+                termBody.scrollTop = termBody.scrollHeight;
+                await loadCreatedFiles();
+            } catch(e) {
+                termBody.innerHTML += `<div class="terminal-line" style="color: #ef4444;">Error: ${escapeHtml(e.message)}</div>`;
+            }
+            
+            terminalHistory.push(cmd);
+            historyIndex = terminalHistory.length;
         }
 
-        async function saveSettings() {
-            const provider = document.getElementById('provider-select').value;
-            const model = document.getElementById('model-input').value;
-            try {
-                await fetch(`${API_BASE}/api/config`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ default_provider: provider, default_model: model })
-                });
-                alert('Saved');
-                loadStatus();
-            } catch(e) { alert('Error: ' + e.message); }
+        const terminalInput = document.getElementById('terminal-input');
+        if (terminalInput) {
+            terminalInput.addEventListener('keypress', async (e) => {
+                if (e.key === 'Enter') {
+                    const cmd = terminalInput.value.trim();
+                    if (cmd) {
+                        await executeCommand(cmd);
+                        terminalInput.value = '';
+                    }
+                }
+            });
+            terminalInput.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (historyIndex > 0) {
+                        historyIndex--;
+                        terminalInput.value = terminalHistory[historyIndex];
+                    }
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (historyIndex < terminalHistory.length - 1) {
+                        historyIndex++;
+                        terminalInput.value = terminalHistory[historyIndex];
+                    } else {
+                        historyIndex = terminalHistory.length;
+                        terminalInput.value = '';
+                    }
+                }
+            });
         }
 
-        async function updateApiKey(provider) {
-            const key = document.getElementById(`key-${provider}`).value;
-            if (!key) return;
-            const apiKeys = {};
-            apiKeys[provider] = key;
-            try {
-                await fetch(`${API_BASE}/api/config`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ api_keys: apiKeys })
-                });
-                alert(`${provider.toUpperCase()} key saved`);
-                document.getElementById(`key-${provider}`).value = '';
-                loadSettings();
-            } catch(e) { alert('Error: ' + e.message); }
-        }
-
-        async function loadSession(sessionId) {
-            try {
-                await fetch(`${API_BASE}/api/sessions/load`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ session_id: sessionId })
-                });
-                alert('Session loaded');
-                loadSessions();
-            } catch(e) { alert('Error: ' + e.message); }
-        }
-
-        async function deleteSession(sessionId) {
-            if (!confirm('Delete?')) return;
-            try {
-                await fetch(`${API_BASE}/api/sessions/delete`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ session_id: sessionId })
-                });
-                alert('Deleted');
-                loadSessions();
-            } catch(e) { alert('Error: ' + e.message); }
-        }
-
-        async function newSession() {
-            try {
-                await fetch(`${API_BASE}/api/sessions/new`, { method: 'POST' });
-                alert('New session');
-                loadSessions();
-            } catch(e) { alert('Error: ' + e.message); }
-        }
-
-        async function clearMemory() {
-            if (!confirm('Clear memory?')) return;
-            try {
-                await fetch(`${API_BASE}/api/sessions/clear`, { method: 'POST' });
-                alert('Cleared');
-                loadSessions();
-            } catch(e) { alert('Error: ' + e.message); }
-        }
-
-        async function clearCreatedFiles() {
-            if (!confirm('Delete all files?')) return;
-            try {
-                await fetch(`${API_BASE}/api/clear-created`, { method: 'POST' });
-                alert('Cleared');
-                loadCreatedFiles();
-            } catch(e) { alert('Error: ' + e.message); }
-        }
-
-        function escapeHtml(text) {
-            if (!text) return '';
-            return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        }
-
-        let isWaiting = false;
-
-        // Store created files from last response
-        let lastCreatedFiles = [];
-
+        // Streaming chat message with stop button
         async function sendMessage() {
             const input = document.getElementById('chat-input');
             const message = input.value.trim();
             const sendBtn = document.getElementById('send-btn');
             
-            if (!message || isWaiting) return;
+            if (!message || isStreaming) return;
 
             addMessage('user', message);
             input.value = '';
             input.style.height = 'auto';
-            sendBtn.disabled = true;
-            isWaiting = true;
-            lastCreatedFiles = [];
+            sendBtn.disabled = false;
+            sendBtn.classList.add('stop');
+            sendBtn.innerHTML = '<span class="send-icon">⏹</span>';
+            sendBtn.onclick = stopTask;
+            isStreaming = true;
 
-            showThinking();
-
-            try {
-                const response = await fetch(`${API_BASE}/api/chat`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: message })
-                });
-                const data = await response.json();
-                
-                hideThinking();
-                
-                if (data.response) {
-                    await typewriterEffect(data.response);
-                    
-                    // Check for created files after response
-                    if (data.created_files && data.created_files.length > 0) {
-                        lastCreatedFiles = data.created_files;
-                        addFileAttachments(lastCreatedFiles);
-                    } else {
-                        // Also refresh file list to detect any created files
-                        await loadCreatedFiles();
-                    }
-                } else if (data.error) {
-                    addMessage('ai', 'Error: ' + data.error);
-                }
-            } catch(e) {
-                hideThinking();
-                addMessage('ai', 'Error: ' + e.message);
-            } finally {
-                sendBtn.disabled = false;
-                isWaiting = false;
-            }
-        }
-
-        function addFileAttachments(files) {
-            if (!files || files.length === 0) return;
-            
-            const messagesDiv = document.getElementById('chat-messages');
-            const lastMessage = messagesDiv.lastChild;
-            
-            if (lastMessage && lastMessage.classList && lastMessage.classList.contains('message') && lastMessage.classList.contains('ai')) {
-                // Add attachments to the last AI message
-                const contentDiv = lastMessage.querySelector('.message-content');
-                if (contentDiv) {
-                    const attachmentDiv = document.createElement('div');
-                    attachmentDiv.className = 'file-attachment';
-                    attachmentDiv.innerHTML = '📎 ' + files.map(f => 
-                        `<a href="#" onclick="downloadFile('${f.path}'); return false;">${escapeHtml(f.name)}</a>`
-                    ).join(', ');
-                    contentDiv.appendChild(attachmentDiv);
-                }
-            } else {
-                // Create a new message with attachments
-                const attachmentText = 'Files created: ' + files.map(f => f.name).join(', ');
-                addMessage('ai', attachmentText);
-                const lastMsg = messagesDiv.lastChild;
-                if (lastMsg) {
-                    const contentDiv = lastMsg.querySelector('.message-content');
-                    if (contentDiv) {
-                        const downloadLinks = files.map(f => 
-                            `<a href="#" onclick="downloadFile('${f.path}'); return false;">📄 ${escapeHtml(f.name)}</a>`
-                        ).join(' ');
-                        contentDiv.innerHTML += '<div class="file-attachment">' + downloadLinks + '</div>';
-                    }
-                }
-            }
-            
-            // Refresh file list in dashboard
-            loadCreatedFiles();
-        }
-
-        async function typewriterEffect(text) {
+            // Create placeholder for AI response
             const messagesDiv = document.getElementById('chat-messages');
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message ai';
@@ -1182,36 +1078,96 @@ INDEX_HTML = '''<!DOCTYPE html>
             messageDiv.appendChild(contentDiv);
             messagesDiv.appendChild(messageDiv);
             
+            let fullText = '';
             const container = document.querySelector('.chat-messages-container');
             if (container) container.scrollTop = container.scrollHeight;
-            
-            let displayedText = '';
-            const chars = text.split('');
-            
-            for (let i = 0; i < chars.length; i++) {
-                displayedText += chars[i];
-                textSpan.innerHTML = escapeHtml(displayedText).replace(/\\n/g, '<br>');
-                if (container) container.scrollTop = container.scrollHeight;
-                await new Promise(r => setTimeout(r, 15));
+
+            currentAbortController = new AbortController();
+
+            try {
+                const response = await fetch(`${API_BASE}/api/chat/stream`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message }),
+                    signal: currentAbortController.signal
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const dataStr = line.slice(6);
+                            if (dataStr === '[DONE]') continue;
+                            
+                            try {
+                                const parsed = JSON.parse(dataStr);
+                                if (parsed.text) {
+                                    fullText += parsed.text;
+                                    textSpan.innerHTML = escapeHtml(fullText).replace(/\\n/g, '<br>');
+                                    if (container) container.scrollTop = container.scrollHeight;
+                                }
+                                if (parsed.complete) {
+                                    cursorSpan.remove();
+                                    if (parsed.success) {
+                                        await loadCreatedFiles();
+                                    }
+                                }
+                                if (parsed.error) {
+                                    textSpan.innerHTML = 'Error: ' + escapeHtml(parsed.error);
+                                    cursorSpan.remove();
+                                }
+                                if (parsed.created_files && parsed.created_files.length > 0) {
+                                    addFileDeliveryMessage(parsed.created_files);
+                                }
+                            } catch(e) {
+                                // Ignore parse errors for partial chunks
+                            }
+                        }
+                    }
+                }
+            } catch(e) {
+                if (e.name === 'AbortError') {
+                    textSpan.innerHTML = '⚠️ Task stopped by user';
+                } else {
+                    textSpan.innerHTML = 'Error: ' + escapeHtml(e.message);
+                }
+                cursorSpan.remove();
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.classList.remove('stop');
+                sendBtn.innerHTML = '<span class="send-icon">→</span>';
+                sendBtn.onclick = sendMessage;
+                isStreaming = false;
+                currentAbortController = null;
             }
-            
-            cursorSpan.remove();
         }
 
-        function showThinking() {
+        function addFileDeliveryMessage(files) {
             const messagesDiv = document.getElementById('chat-messages');
-            const thinkingDiv = document.createElement('div');
-            thinkingDiv.id = 'thinking-indicator';
-            thinkingDiv.className = 'thinking-indicator';
-            thinkingDiv.innerHTML = '<span></span><span></span><span></span>';
-            messagesDiv.appendChild(thinkingDiv);
+            const deliveryDiv = document.createElement('div');
+            deliveryDiv.className = 'file-delivery';
+            let filesHtml = '<div class="file-delivery-content"><div class="file-delivery-header">📎 Files Created</div><div class="file-list">';
+            files.forEach(file => {
+                const isDir = file.is_dir;
+                const icon = isDir ? '📁' : '📄';
+                const sizeText = file.size ? formatFileSize(file.size) : '';
+                const downloadUrl = isDir ? `/api/folder/download?path=${encodeURIComponent(file.path)}` : `/api/files/download?path=${encodeURIComponent(file.path)}`;
+                filesHtml += `<div class="file-delivery-item"><div class="file-icon">${icon}</div><div class="file-info"><a href="#" class="file-name-link" onclick="window.open('${downloadUrl}', '_blank'); return false;">${escapeHtml(file.name)}</a>${sizeText ? `<div class="file-size">${sizeText}</div>` : ''}</div><button class="${isDir ? 'download-folder-btn' : 'download-single-btn'}" onclick="window.open('${downloadUrl}', '_blank')">Download</button></div>`;
+            });
+            if (files.length > 1) filesHtml += `<button class="download-all-btn" onclick="downloadAllFiles()">📦 Download All (${files.length} items)</button>`;
+            filesHtml += '</div></div>';
+            deliveryDiv.innerHTML = filesHtml;
+            messagesDiv.appendChild(deliveryDiv);
             const container = document.querySelector('.chat-messages-container');
             if (container) container.scrollTop = container.scrollHeight;
-        }
-
-        function hideThinking() {
-            const thinkingDiv = document.getElementById('thinking-indicator');
-            if (thinkingDiv) thinkingDiv.remove();
         }
 
         function addMessage(role, content) {
@@ -1225,51 +1181,7 @@ INDEX_HTML = '''<!DOCTYPE html>
             if (container) container.scrollTop = container.scrollHeight;
         }
 
-        async function executeCommand(cmd) {
-            const termBody = document.getElementById('terminal-body');
-            termBody.innerHTML += `<div class="terminal-line">$ ${escapeHtml(cmd)}</div>`;
-            termBody.scrollTop = termBody.scrollHeight;
-
-            try {
-                const res = await fetch(`${API_BASE}/api/command`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ command: cmd })
-                });
-                const data = await res.json();
-                if (data.stdout) {
-                    termBody.innerHTML += `<div class="terminal-line">${escapeHtml(data.stdout)}</div>`;
-                }
-                if (data.stderr) {
-                    termBody.innerHTML += `<div class="terminal-line" style="color: #f59e0b;">${escapeHtml(data.stderr)}</div>`;
-                }
-                termBody.scrollTop = termBody.scrollHeight;
-                await loadCreatedFiles();
-            } catch(e) {
-                termBody.innerHTML += `<div class="terminal-line" style="color: #ef4444;">Error</div>`;
-            }
-        }
-
-        const terminalInput = document.getElementById('terminal-input');
-        if (terminalInput) {
-            terminalInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    const cmd = terminalInput.value.trim();
-                    if (cmd) {
-                        executeCommand(cmd);
-                        terminalInput.value = '';
-                    }
-                }
-            });
-        }
-
-        async function loadStatus() {
-            try {
-                const res = await fetch(`${API_BASE}/api/status`);
-                const data = await res.json();
-                document.getElementById('status-text').innerText = data.provider || 'Ready';
-            } catch(e) {}
-        }
+        async function loadStatus() { try { const res = await fetch(`${API_BASE}/api/status`); const data = await res.json(); document.getElementById('status-text').innerText = data.provider || 'Ready'; } catch(e) {} }
 
         loadDashboard();
         loadStatus();
@@ -1280,13 +1192,15 @@ INDEX_HTML = '''<!DOCTYPE html>
 
 def create_app():
     """Create Flask app with full ZynoxAI integration"""
-    global zynox, config, session_manager, file_manager
+    global zynox, config, session_manager, file_manager, global_cwd, stop_task_flag
     
     # Initialize ZynoxAI components
     zynox = ZynoxAI()
     config = Config()
     session_manager = SessionManager()
     file_manager = FileManager()
+    global_cwd = os.path.expanduser("~")
+    stop_task_flag = False
     
     app = Flask(__name__)
     app.config['SECRET_KEY'] = 'zynoxai-secret'
@@ -1307,6 +1221,33 @@ def create_app():
     def settings():
         return INDEX_HTML
     
+    @app.route('/api/pwd')
+    def api_pwd():
+        global global_cwd
+        return jsonify({'cwd': global_cwd})
+    
+    @app.route('/api/cd', methods=['POST'])
+    def api_cd():
+        global global_cwd
+        data = request.json
+        path = data.get('path', '')
+        
+        try:
+            if path == '~' or path == '':
+                new_path = os.path.expanduser("~")
+            elif path.startswith('/'):
+                new_path = path
+            else:
+                new_path = os.path.normpath(os.path.join(global_cwd, path))
+            
+            if os.path.exists(new_path) and os.path.isdir(new_path):
+                global_cwd = new_path
+                return jsonify({'success': True, 'cwd': global_cwd})
+            else:
+                return jsonify({'success': False, 'error': 'Directory not found'})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)})
+    
     @app.route('/api/status')
     def api_status():
         return jsonify({
@@ -1314,63 +1255,18 @@ def create_app():
             'provider': zynox.current_provider,
             'environment': zynox.environment,
             'package_manager': zynox.package_manager,
-            'version': '3.7.11'
+            'version': '3.6.8'
         })
     
-    @app.route('/api/chat', methods=['POST'])
-    def api_chat():
-        """Chat endpoint that returns created files info"""
-        data = request.json
-        user_msg = data.get('message', '')
-        
-        # Track files before execution
-        create_dir = Config.get_create_dir()
-        files_before = set()
-        if os.path.exists(create_dir):
-            for root, dirs, files in os.walk(create_dir):
-                for file in files:
-                    rel_path = os.path.relpath(os.path.join(root, file), create_dir)
-                    files_before.add(rel_path)
-        
-        output_buffer = io.StringIO()
-        
-        with redirect_stdout(output_buffer):
-            zynox.memory.add_message("user", user_msg)
-            zynox.task_complete = False
-            
-            file_list = zynox.file_manager.list_files(".")
-            prompt = zynox.create_prompt(user_msg, "", file_list)
-            response = zynox.call_api(zynox.current_provider, prompt)
-            
-            if response:
-                zynox.memory.add_message("assistant", response[:300])
-                zynox.parse_and_execute(response, ".")
-        
-        result = output_buffer.getvalue()
-        if not result or len(result.strip()) == 0:
-            result = "Task completed"
-        
-        # Detect newly created files
-        created_files = []
-        if os.path.exists(create_dir):
-            for root, dirs, files in os.walk(create_dir):
-                for file in files:
-                    rel_path = os.path.relpath(os.path.join(root, file), create_dir)
-                    if rel_path not in files_before:
-                        created_files.append({
-                            'name': file,
-                            'path': rel_path,
-                            'size': os.path.getsize(os.path.join(root, file))
-                        })
-        
-        return jsonify({
-            'response': result,
-            'created_files': created_files
-        })
+    @app.route('/api/stop', methods=['POST'])
+    def api_stop():
+        """Stop the current running task"""
+        global stop_task_flag
+        stop_task_flag = True
+        return jsonify({'success': True})
     
     @app.route('/api/files/list')
     def api_files_list():
-        """List all created files with metadata"""
         create_dir = Config.get_create_dir()
         files = []
         
@@ -1380,21 +1276,10 @@ def create_app():
                     item_path = os.path.join(path, item)
                     rel_path = os.path.join(relative_path, item) if relative_path else item
                     if os.path.isdir(item_path):
-                        files.append({
-                            'name': item,
-                            'path': rel_path,
-                            'is_dir': True,
-                            'size': 0
-                        })
+                        files.append({'name': item, 'path': rel_path, 'is_dir': True, 'size': 0})
                         scan_directory(item_path, rel_path)
                     else:
-                        size = os.path.getsize(item_path)
-                        files.append({
-                            'name': item,
-                            'path': rel_path,
-                            'is_dir': False,
-                            'size': size
-                        })
+                        files.append({'name': item, 'path': rel_path, 'is_dir': False, 'size': os.path.getsize(item_path)})
             except Exception as e:
                 print(f"Error scanning: {e}")
         
@@ -1405,7 +1290,6 @@ def create_app():
     
     @app.route('/api/files/download')
     def api_file_download():
-        """Download a single file"""
         filepath = request.args.get('path', '')
         create_dir = Config.get_create_dir()
         full_path = os.path.join(create_dir, filepath)
@@ -1415,9 +1299,30 @@ def create_app():
         
         return send_file(full_path, as_attachment=True, download_name=os.path.basename(full_path))
     
+    @app.route('/api/folder/download')
+    def api_folder_download():
+        folderpath = request.args.get('path', '')
+        create_dir = Config.get_create_dir()
+        full_path = os.path.join(create_dir, folderpath)
+        
+        if not os.path.exists(full_path) or not os.path.isdir(full_path):
+            return jsonify({'error': 'Folder not found'}), 404
+        
+        zip_buffer = io.BytesIO()
+        folder_name = os.path.basename(full_path)
+        
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for root, dirs, files in os.walk(full_path):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    arcname = os.path.relpath(file_path, os.path.dirname(full_path))
+                    zip_file.write(file_path, arcname)
+        
+        zip_buffer.seek(0)
+        return send_file(zip_buffer, as_attachment=True, download_name=f'{folder_name}.zip', mimetype='application/zip')
+    
     @app.route('/api/files/download-all')
     def api_files_download_all():
-        """Download all created files as ZIP"""
         create_dir = Config.get_create_dir()
         zip_buffer = io.BytesIO()
         
@@ -1495,29 +1400,209 @@ def create_app():
     
     @app.route('/api/command', methods=['POST'])
     def api_command():
+        global global_cwd
         data = request.json
         command = data.get('command', '')
+        cwd = data.get('cwd', global_cwd)
         
         if command.strip().startswith('zynox'):
-            return jsonify({
-                'stdout': 'Use standard Linux commands.',
-                'stderr': '',
-                'returncode': 0
-            })
+            return jsonify({'stdout': 'Use standard Linux commands.', 'stderr': '', 'returncode': 0})
         
         try:
-            result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=30, executable='/bin/bash')
-            return jsonify({
-                'stdout': result.stdout,
-                'stderr': result.stderr,
-                'returncode': result.returncode
-            })
+            result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=30, executable='/bin/bash', cwd=cwd)
+            return jsonify({'stdout': result.stdout, 'stderr': result.stderr, 'returncode': result.returncode})
         except subprocess.TimeoutExpired:
             return jsonify({'stderr': 'Timeout', 'returncode': -1})
         except Exception as e:
             return jsonify({'stderr': str(e), 'returncode': -1})
     
+    # Step-by-step streaming chat endpoint with stop support
+    @app.route('/api/chat/stream', methods=['POST'])
+    def api_chat_stream():
+        """Step-by-step streaming chat endpoint with real-time output and stop support"""
+        global stop_task_flag
+        data = request.json
+        user_msg = data.get('message', '')
+        
+        # Reset stop flag for new task
+        stop_task_flag = False
+        
+        def generate():
+            from ..core.executor.step_executor import StepExecutor
+            
+            # Track created files
+            create_dir = Config.get_create_dir()
+            files_before = set()
+            if os.path.exists(create_dir):
+                for root, dirs, files in os.walk(create_dir):
+                    for file in files:
+                        rel_path = os.path.relpath(os.path.join(root, file), create_dir)
+                        files_before.add(rel_path)
+            
+            # Queue for collecting output
+            output_queue = []
+            created_files = []
+            
+            def callback(text, color="white"):
+                """Callback function to collect output"""
+                output_queue.append(text)
+            
+            # Check stop flag periodically
+            def check_stop():
+                return stop_task_flag
+            
+            # Create executor with callback and stop checker
+            executor = StepExecutor(zynox, callback)
+            
+            # Override the emit method to check stop flag
+            original_emit = executor.emit
+            def emit_with_stop(text, color="white"):
+                if stop_task_flag:
+                    original_emit("[Task stopped by user]", "yellow")
+                    raise Exception("Task stopped")
+                original_emit(text, color)
+            
+            executor.emit = emit_with_stop
+            
+            # Run in thread to allow streaming
+            import threading
+            success = False
+            exception = None
+            
+            def run_task():
+                nonlocal success, exception
+                try:
+                    if not stop_task_flag:
+                        success = executor.run(user_msg, ".")
+                except Exception as e:
+                    if "stopped" not in str(e):
+                        exception = str(e)
+            
+            thread = threading.Thread(target=run_task)
+            thread.start()
+            
+            # Stream output as it comes
+            while thread.is_alive():
+                if stop_task_flag:
+                    yield f"data: {json.dumps({'text': '\\n⚠️ Task stopped by user\\n', 'complete': True})}\n\n"
+                    return
+                if output_queue:
+                    for line in output_queue:
+                        yield f"data: {json.dumps({'text': line})}\n\n"
+                    output_queue.clear()
+                time.sleep(0.05)
+            
+            # Get any remaining output
+            if output_queue:
+                for line in output_queue:
+                    yield f"data: {json.dumps({'text': line})}\n\n"
+            
+            if not stop_task_flag:
+                # Detect newly created files
+                if os.path.exists(create_dir):
+                    for root, dirs, files in os.walk(create_dir):
+                        for file in files:
+                            rel_path = os.path.relpath(os.path.join(root, file), create_dir)
+                            if rel_path not in files_before:
+                                full_path = os.path.join(root, file)
+                                created_files.append({
+                                    'name': file,
+                                    'path': rel_path,
+                                    'size': os.path.getsize(full_path),
+                                    'is_dir': False
+                                })
+                        for dir_name in dirs:
+                            rel_path = os.path.relpath(os.path.join(root, dir_name), create_dir)
+                            created_files.append({
+                                'name': dir_name,
+                                'path': rel_path,
+                                'size': 0,
+                                'is_dir': True
+                            })
+                
+                # Send created files info
+                if created_files:
+                    yield f"data: {json.dumps({'created_files': created_files})}\n\n"
+            
+            # Send completion
+            if exception:
+                yield f"data: {json.dumps({'error': exception, 'complete': True})}\n\n"
+            elif stop_task_flag:
+                yield f"data: {json.dumps({'complete': True, 'success': False, 'stopped': True})}\n\n"
+            else:
+                yield f"data: {json.dumps({'complete': True, 'success': success})}\n\n"
+        
+        return Response(stream_with_context(generate()), mimetype='text/event-stream')
+    
+    # Legacy chat endpoint for compatibility
+    @app.route('/api/chat', methods=['POST'])
+    def api_chat():
+        """Legacy chat endpoint - returns full response at once"""
+        global stop_task_flag
+        stop_task_flag = False
+        data = request.json
+        user_msg = data.get('message', '')
+        
+        create_dir = Config.get_create_dir()
+        files_before = set()
+        folders_before = set()
+        if os.path.exists(create_dir):
+            for root, dirs, files in os.walk(create_dir):
+                for file in files:
+                    rel_path = os.path.relpath(os.path.join(root, file), create_dir)
+                    files_before.add(rel_path)
+                for dir_name in dirs:
+                    rel_path = os.path.relpath(os.path.join(root, dir_name), create_dir)
+                    folders_before.add(rel_path)
+        
+        output_buffer = io.StringIO()
+        
+        with redirect_stdout(output_buffer):
+            zynox.memory.add_message("user", user_msg)
+            zynox.task_complete = False
+            
+            file_list = zynox.file_manager.list_files(".")
+            prompt = zynox.create_prompt(user_msg, "", file_list)
+            response = zynox.call_api(zynox.current_provider, prompt)
+            
+            if response:
+                zynox.memory.add_message("assistant", response[:300])
+                zynox.parse_and_execute(response, ".")
+        
+        result = output_buffer.getvalue()
+        if not result or len(result.strip()) == 0:
+            result = "Task completed"
+        
+        created_items = []
+        if os.path.exists(create_dir):
+            for root, dirs, files in os.walk(create_dir):
+                for file in files:
+                    rel_path = os.path.relpath(os.path.join(root, file), create_dir)
+                    if rel_path not in files_before:
+                        full_path = os.path.join(root, file)
+                        created_items.append({
+                            'name': file,
+                            'path': rel_path,
+                            'size': os.path.getsize(full_path),
+                            'is_dir': False
+                        })
+                for dir_name in dirs:
+                    rel_path = os.path.relpath(os.path.join(root, dir_name), create_dir)
+                    if rel_path not in folders_before:
+                        created_items.append({
+                            'name': dir_name,
+                            'path': rel_path,
+                            'size': 0,
+                            'is_dir': True
+                        })
+        
+        return jsonify({
+            'response': result,
+            'created_files': created_items
+        })
+    
     return app
+
 
 def run_web_server(host='127.0.0.1', port=5000, debug=False):
     """Run web server"""
@@ -1526,6 +1611,7 @@ def run_web_server(host='127.0.0.1', port=5000, debug=False):
     print(f"[Access at: http://{host}:{port}]")
     print(f"[Press Ctrl+C to stop]\n")
     app.run(host=host, port=port, debug=debug, threaded=True)
+
 
 if __name__ == '__main__':
     run_web_server()
