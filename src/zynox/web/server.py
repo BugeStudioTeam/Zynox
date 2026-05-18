@@ -17,7 +17,7 @@ h1{font-size:3rem;background:linear-gradient(135deg,#00d4ff,#9d4edd);-webkit-bac
 <body>
 <h1>ZynoxAI</h1>
 <div class="status">✅ Web Server Running</div>
-<p>Version 2.2.5 | Buge Studio</p>
+<p>Version 4.8.15 | Buge Studio</p>
 <p>Access: <a href="/api/status">/api/status</a></p>
 </body>
 </html>
@@ -34,7 +34,7 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
-            self.wfile.write(json.dumps({'status': 'running', 'version': '2.2.5'}).encode())
+            self.wfile.write(json.dumps({'status': 'running', 'version': '4.8.15'}).encode())
         else:
             self.send_response(404)
             self.end_headers()

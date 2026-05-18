@@ -1,2 +1,2 @@
 # ZynoxAI root package
-__version__ = "3.7.11"
+__version__ = "4.8.15"

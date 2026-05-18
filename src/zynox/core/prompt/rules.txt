@@ -5,16 +5,30 @@
 2. After each action, wait for the result before deciding the next action.
 3. Read command outputs carefully to determine if the action succeeded.
 4. If an action fails, try to fix it or report the error clearly.
+5. When the task is complete, output COMPLETE.
+6. Do NOT repeat actions that have already succeeded.
+7. Do NOT keep creating the same file/folder multiple times.
 
-## Action Types
-- search_file: Search for a file by name
-- search_folder: Search for a folder by name  
-- read: Read file content
-- list: List directory contents
-- create_file: Create a new file with content
-- create_folder: Create a new folder
-- execute: Run a system command
-- complete: Mark task as complete
+## Action Types with Required Fields
+- create_file: MUST include "path" and "content" fields
+- create_folder: MUST include "path" field
+- command/execute: MUST include "command" field
+- read: MUST include "path" field
+- search_file: MUST include "filename" field
+- search_folder: MUST include "foldername" field
+- list: MAY include "path" field (defaults to current directory)
+- complete: MAY include "message" field
+
+## Valid JSON Examples
+{"type": "create_folder", "path": "my_folder"}
+{"type": "create_file", "path": "my_folder/hello.txt", "content": "Hello World"}
+{"type": "command", "command": "ls -la"}
+{"type": "complete", "message": "Task completed"}
+
+## Invalid JSON (DO NOT USE)
+{"type": "create_folder"}  ← Missing "path"
+{"type": "create_file"}    ← Missing "path" and "content"
+{"actions": [...]}         ← Do NOT use actions array
 
 ## Execution Flow Rules
 1. ALWAYS check if files exist before trying to read them
@@ -22,25 +36,31 @@
 3. When commands fail, analyze the error output
 4. Use absolute paths or relative paths from current directory
 5. Do NOT proceed to next step if previous step failed critically
+6. After creating a file/folder, remember that it exists
+7. Do NOT recreate files/folders that already exist
 
-## Output Format
-Each step must output ONLY valid JSON with one action:
-{"type": "action_type", "params": {...}}
+## Example Flow for "创建一个文件夹 一个 zip 和一个 txt"
+Step 1: {"type": "create_folder", "path": "my_folder"}
+Step 2: {"type": "create_file", "path": "my_folder/example.txt", "content": "This is a text file"}
+Step 3: {"type": "command", "command": "cd my_folder && zip archive.zip example.txt"}
+Step 4: {"type": "complete", "message": "Folder, text file, and zip file created"}
 
 ## Example Flow for "create a zip file with python files"
-Step 1: {"type": "execute", "command": "find . -name '*.py' -type f"}
-Wait for output (list of python files)
-Step 2: {"type": "execute", "command": "zip archive.zip file1.py file2.py"}
-Wait for output
+Step 1: {"type": "command", "command": "find . -name '*.py' -type f"}
+Step 2: {"type": "command", "command": "zip archive.zip file1.py file2.py"}
 Step 3: {"type": "complete", "message": "Zip file created"}
 
 ## Example Flow for "find abc.txt and read it"
 Step 1: {"type": "search_file", "filename": "abc.txt"}
-Wait for output (file path)
 Step 2: {"type": "read", "path": "/found/path/abc.txt"}
-Wait for output (file content)
 Step 3: {"type": "complete", "message": "File found and displayed"}
 
 ## NEVER output multiple actions in one JSON
 BAD: {"actions": [action1, action2, action3]}
 GOOD: One action per response
+
+## When to output COMPLETE
+- After successfully creating all requested files/folders
+- After successfully executing all requested commands
+- When the user's request has been fully satisfied
+- Do NOT continue creating the same items repeatedly

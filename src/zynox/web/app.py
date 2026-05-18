@@ -1,4 +1,4 @@
-"""Flask web application for ZynoxAI - Complete with stop functionality"""
+"""Flask web application for ZynoxAI - Complete with file icons and forced workspace"""
 
 import os
 import sys
@@ -8,7 +8,7 @@ import io
 import zipfile
 import time
 import threading
-import signal
+import requests
 from pathlib import Path
 from flask import Flask, render_template, request, jsonify, send_file, Response, stream_with_context
 from contextlib import redirect_stdout
@@ -32,6 +32,32 @@ os.makedirs(STATIC_DIR, exist_ok=True)
 os.makedirs(os.path.join(STATIC_DIR, 'css'), exist_ok=True)
 os.makedirs(os.path.join(STATIC_DIR, 'js'), exist_ok=True)
 
+# Download icons from GitHub
+ICON_URLS = {
+    'folder': 'https://raw.githubusercontent.com/BugeStudioTeam/Zynox/refs/heads/main/images/icons/folder.png',
+    'zip': 'https://raw.githubusercontent.com/BugeStudioTeam/Zynox/refs/heads/main/images/icons/zip.png',
+    'file': 'https://raw.githubusercontent.com/BugeStudioTeam/Zynox/refs/heads/main/images/icons/file.png'
+}
+
+def download_icon(name, url):
+    """Download icon from URL to static directory"""
+    icon_path = os.path.join(STATIC_DIR, f'{name}.png')
+    if not os.path.exists(icon_path):
+        try:
+            response = requests.get(url, timeout=10)
+            if response.status_code == 200:
+                with open(icon_path, 'wb') as f:
+                    f.write(response.content)
+                print(f"[Downloaded icon: {name}.png]")
+            else:
+                print(f"[Failed to download {name}.png: HTTP {response.status_code}]")
+        except Exception as e:
+            print(f"[Error downloading {name}.png: {e}]")
+
+# Download icons on startup
+for name, url in ICON_URLS.items():
+    download_icon(name, url)
+
 # Global ZynoxAI instance
 zynox = None
 config = None
@@ -44,7 +70,7 @@ global_cwd = os.path.expanduser("~")
 # Global stop flag for current task
 stop_task_flag = False
 
-# Complete HTML template
+# Complete HTML template with icons
 INDEX_HTML = '''<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -293,14 +319,21 @@ INDEX_HTML = '''<!DOCTYPE html>
         }
 
         .file-name {
-            font-family: monospace;
-            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
             cursor: pointer;
             color: var(--accent);
         }
 
         .file-name:hover {
             text-decoration: underline;
+        }
+
+        .file-icon {
+            width: 20px;
+            height: 20px;
+            object-fit: contain;
         }
 
         .download-btn {
@@ -429,8 +462,10 @@ INDEX_HTML = '''<!DOCTYPE html>
             background: var(--accent-soft);
         }
 
-        .file-icon {
-            font-size: 1.25rem;
+        .file-delivery-icon {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
         }
 
         .file-info {
@@ -438,6 +473,9 @@ INDEX_HTML = '''<!DOCTYPE html>
         }
 
         .file-name-link {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
             font-family: monospace;
             font-size: 0.8rem;
             color: var(--accent);
@@ -844,7 +882,7 @@ INDEX_HTML = '''<!DOCTYPE html>
 
             <div class="terminal">
                 <div class="terminal-header">terminal</div>
-                <div class="terminal-body" id="terminal-body"><div class="terminal-line">ZynoxAI Terminal v3.6.8</div><div class="terminal-line">Type commands below (cd, ls, pwd, etc.)</div><div class="terminal-line">---</div></div>
+                <div class="terminal-body" id="terminal-body"><div class="terminal-line">ZynoxAI Terminal v4.8.15</div><div class="terminal-line">Type commands below (cd, ls, pwd, etc.)</div><div class="terminal-line">---</div></div>
                 <div class="terminal-input-line"><span class="terminal-prompt">$</span><input type="text" class="terminal-input" id="terminal-input" placeholder="cd .., ls -la, pwd..."></div>
             </div>
         </div>
@@ -857,7 +895,7 @@ INDEX_HTML = '''<!DOCTYPE html>
         <div id="settings-page" class="settings-page hidden">
             <div class="settings-section"><div class="settings-title">AI Provider</div><div class="setting-item"><span class="setting-label">Default Provider</span><select id="provider-select"><option value="openai">OpenAI</option><option value="gemini">Gemini</option><option value="grok">Grok</option><option value="deepseek">DeepSeek</option></select></div><div class="setting-item"><span class="setting-label">Default Model</span><input type="text" id="model-input" placeholder="e.g., deepseek-chat"></div><div style="margin-top: 0.75rem;"><button class="btn btn-primary" onclick="saveSettings()">Save</button></div></div>
             <div class="settings-section"><div class="settings-title">API Keys</div><div id="api-keys-container"></div><div class="text-muted" style="margin-top: 0.75rem; padding: 0.5rem;">Keys stored locally</div></div>
-            <div class="settings-section"><div class="settings-title">About</div><div class="setting-item"><span>Version</span><span>3.6.8</span></div><div class="setting-item"><span>Author</span><span>Buge Studio</span></div><div class="setting-item"><span>GitHub</span><a href="https://github.com/BugeStudioTeam/Zynox" style="color: var(--accent); text-decoration: none;">repo</a></div></div>
+            <div class="settings-section"><div class="settings-title">About</div><div class="setting-item"><span>Version</span><span>4.8.15</span></div><div class="setting-item"><span>Author</span><span>Buge Studio</span></div><div class="setting-item"><span>GitHub</span><a href="https://github.com/BugeStudioTeam/Zynox" style="color: var(--accent); text-decoration: none;">repo</a></div></div>
         </div>
     </main>
 
@@ -868,6 +906,18 @@ INDEX_HTML = '''<!DOCTYPE html>
         let historyIndex = -1;
         let isStreaming = false;
         let currentAbortController = null;
+
+        const ICONS = {
+            folder: '/static/folder.png',
+            zip: '/static/zip.png',
+            file: '/static/file.png'
+        };
+
+        function getFileIcon(filename, isDir) {
+            if (isDir) return ICONS.folder;
+            if (filename && filename.endsWith('.zip')) return ICONS.zip;
+            return ICONS.file;
+        }
 
         async function getCurrentDirectory() {
             try {
@@ -911,7 +961,7 @@ INDEX_HTML = '''<!DOCTYPE html>
         }
 
         async function loadCreatedFiles() {
-            try { const res = await fetch(`${API_BASE}/api/files/list`); const data = await res.json(); const container = document.getElementById('created-files-container'); if (data.files && data.files.length > 0) { let filesHtml = ''; data.files.forEach(file => { const isDir = file.is_dir; const icon = isDir ? '📁' : '📄'; const downloadUrl = isDir ? `/api/folder/download?path=${encodeURIComponent(file.path)}` : `/api/files/download?path=${encodeURIComponent(file.path)}`; filesHtml += `<div class="file-item"><span class="file-name" onclick="window.open('${downloadUrl}', '_blank')">${icon} ${escapeHtml(file.name)}</span><button class="download-btn" onclick="window.open('${downloadUrl}', '_blank')">Download</button></div>`; }); container.innerHTML = filesHtml; } else { container.innerHTML = '<div class="file-item">No files created yet</div>'; } } catch(e) { console.error(e); }
+            try { const res = await fetch(`${API_BASE}/api/files/list`); const data = await res.json(); const container = document.getElementById('created-files-container'); if (data.files && data.files.length > 0) { let filesHtml = ''; data.files.forEach(file => { const isDir = file.is_dir; const iconUrl = getFileIcon(file.name, isDir); filesHtml += `<div class="file-item"><span class="file-name" onclick="window.open('/api/files/download?path=${encodeURIComponent(file.path)}', '_blank')"><img src="${iconUrl}" class="file-icon" alt="">${escapeHtml(file.name)}</span><button class="download-btn" onclick="window.open('/api/files/download?path=${encodeURIComponent(file.path)}', '_blank')">Download</button></div>`; }); container.innerHTML = filesHtml; } else { container.innerHTML = '<div class="file-item">No files created yet</div>'; } } catch(e) { console.error(e); }
         }
 
         async function downloadAllFiles() { window.open(`${API_BASE}/api/files/download-all`, '_blank'); }
@@ -935,10 +985,7 @@ INDEX_HTML = '''<!DOCTYPE html>
             if (!isStreaming) return;
             
             try {
-                const response = await fetch(`${API_BASE}/api/stop`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                const response = await fetch(`${API_BASE}/api/stop`, { method: 'POST' });
                 const data = await response.json();
                 if (data.success) {
                     addMessage('ai', '⚠️ Task stopped by user');
@@ -951,6 +998,7 @@ INDEX_HTML = '''<!DOCTYPE html>
                     sendBtn.disabled = false;
                     sendBtn.classList.remove('stop');
                     sendBtn.innerHTML = '<span class="send-icon">→</span>';
+                    sendBtn.onclick = sendMessage;
                     const thinkingDiv = document.getElementById('thinking-indicator');
                     if (thinkingDiv) thinkingDiv.remove();
                 }
@@ -959,7 +1007,6 @@ INDEX_HTML = '''<!DOCTYPE html>
             }
         }
 
-        // Terminal commands
         async function executeCommand(cmd) {
             const termBody = document.getElementById('terminal-body');
             termBody.innerHTML += `<div class="terminal-line">$ ${escapeHtml(cmd)}</div>`;
@@ -1047,7 +1094,6 @@ INDEX_HTML = '''<!DOCTYPE html>
             });
         }
 
-        // Streaming chat message with stop button
         async function sendMessage() {
             const input = document.getElementById('chat-input');
             const message = input.value.trim();
@@ -1064,7 +1110,6 @@ INDEX_HTML = '''<!DOCTYPE html>
             sendBtn.onclick = stopTask;
             isStreaming = true;
 
-            // Create placeholder for AI response
             const messagesDiv = document.getElementById('chat-messages');
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message ai';
@@ -1128,7 +1173,7 @@ INDEX_HTML = '''<!DOCTYPE html>
                                     addFileDeliveryMessage(parsed.created_files);
                                 }
                             } catch(e) {
-                                // Ignore parse errors for partial chunks
+                                // Ignore parse errors
                             }
                         }
                     }
@@ -1154,15 +1199,15 @@ INDEX_HTML = '''<!DOCTYPE html>
             const messagesDiv = document.getElementById('chat-messages');
             const deliveryDiv = document.createElement('div');
             deliveryDiv.className = 'file-delivery';
-            let filesHtml = '<div class="file-delivery-content"><div class="file-delivery-header">📎 Files Created</div><div class="file-list">';
+            let filesHtml = '<div class="file-delivery-content"><div class="file-delivery-header">Files Created</div><div class="file-list">';
             files.forEach(file => {
                 const isDir = file.is_dir;
-                const icon = isDir ? '📁' : '📄';
+                const iconUrl = getFileIcon(file.name, isDir);
                 const sizeText = file.size ? formatFileSize(file.size) : '';
                 const downloadUrl = isDir ? `/api/folder/download?path=${encodeURIComponent(file.path)}` : `/api/files/download?path=${encodeURIComponent(file.path)}`;
-                filesHtml += `<div class="file-delivery-item"><div class="file-icon">${icon}</div><div class="file-info"><a href="#" class="file-name-link" onclick="window.open('${downloadUrl}', '_blank'); return false;">${escapeHtml(file.name)}</a>${sizeText ? `<div class="file-size">${sizeText}</div>` : ''}</div><button class="${isDir ? 'download-folder-btn' : 'download-single-btn'}" onclick="window.open('${downloadUrl}', '_blank')">Download</button></div>`;
+                filesHtml += `<div class="file-delivery-item"><img src="${iconUrl}" class="file-delivery-icon" alt=""><div class="file-info"><a href="#" class="file-name-link" onclick="window.open('${downloadUrl}', '_blank'); return false;">${escapeHtml(file.name)}</a>${sizeText ? `<div class="file-size">${sizeText}</div>` : ''}</div><button class="${isDir ? 'download-folder-btn' : 'download-single-btn'}" onclick="window.open('${downloadUrl}', '_blank')">Download</button></div>`;
             });
-            if (files.length > 1) filesHtml += `<button class="download-all-btn" onclick="downloadAllFiles()">📦 Download All (${files.length} items)</button>`;
+            if (files.length > 1) filesHtml += `<button class="download-all-btn" onclick="downloadAllFiles()">Download All (${files.length} items)</button>`;
             filesHtml += '</div></div>';
             deliveryDiv.innerHTML = filesHtml;
             messagesDiv.appendChild(deliveryDiv);
@@ -1221,6 +1266,10 @@ def create_app():
     def settings():
         return INDEX_HTML
     
+    @app.route('/static/<path:filename>')
+    def serve_static(filename):
+        return send_file(os.path.join(STATIC_DIR, filename))
+    
     @app.route('/api/pwd')
     def api_pwd():
         global global_cwd
@@ -1255,12 +1304,11 @@ def create_app():
             'provider': zynox.current_provider,
             'environment': zynox.environment,
             'package_manager': zynox.package_manager,
-            'version': '3.6.8'
+            'version': '4.8.15'
         })
     
     @app.route('/api/stop', methods=['POST'])
     def api_stop():
-        """Stop the current running task"""
         global stop_task_flag
         stop_task_flag = True
         return jsonify({'success': True})
@@ -1419,7 +1467,6 @@ def create_app():
     # Step-by-step streaming chat endpoint with stop support
     @app.route('/api/chat/stream', methods=['POST'])
     def api_chat_stream():
-        """Step-by-step streaming chat endpoint with real-time output and stop support"""
         global stop_task_flag
         data = request.json
         user_msg = data.get('message', '')
@@ -1430,7 +1477,6 @@ def create_app():
         def generate():
             from ..core.executor.step_executor import StepExecutor
             
-            # Track created files
             create_dir = Config.get_create_dir()
             files_before = set()
             if os.path.exists(create_dir):
@@ -1439,32 +1485,14 @@ def create_app():
                         rel_path = os.path.relpath(os.path.join(root, file), create_dir)
                         files_before.add(rel_path)
             
-            # Queue for collecting output
             output_queue = []
             created_files = []
             
             def callback(text, color="white"):
-                """Callback function to collect output"""
                 output_queue.append(text)
             
-            # Check stop flag periodically
-            def check_stop():
-                return stop_task_flag
-            
-            # Create executor with callback and stop checker
             executor = StepExecutor(zynox, callback)
             
-            # Override the emit method to check stop flag
-            original_emit = executor.emit
-            def emit_with_stop(text, color="white"):
-                if stop_task_flag:
-                    original_emit("[Task stopped by user]", "yellow")
-                    raise Exception("Task stopped")
-                original_emit(text, color)
-            
-            executor.emit = emit_with_stop
-            
-            # Run in thread to allow streaming
             import threading
             success = False
             exception = None
@@ -1481,7 +1509,6 @@ def create_app():
             thread = threading.Thread(target=run_task)
             thread.start()
             
-            # Stream output as it comes
             while thread.is_alive():
                 if stop_task_flag:
                     yield f"data: {json.dumps({'text': '\\n⚠️ Task stopped by user\\n', 'complete': True})}\n\n"
@@ -1492,13 +1519,11 @@ def create_app():
                     output_queue.clear()
                 time.sleep(0.05)
             
-            # Get any remaining output
             if output_queue:
                 for line in output_queue:
                     yield f"data: {json.dumps({'text': line})}\n\n"
             
             if not stop_task_flag:
-                # Detect newly created files
                 if os.path.exists(create_dir):
                     for root, dirs, files in os.walk(create_dir):
                         for file in files:
@@ -1520,11 +1545,9 @@ def create_app():
                                 'is_dir': True
                             })
                 
-                # Send created files info
                 if created_files:
                     yield f"data: {json.dumps({'created_files': created_files})}\n\n"
             
-            # Send completion
             if exception:
                 yield f"data: {json.dumps({'error': exception, 'complete': True})}\n\n"
             elif stop_task_flag:
@@ -1534,10 +1557,8 @@ def create_app():
         
         return Response(stream_with_context(generate()), mimetype='text/event-stream')
     
-    # Legacy chat endpoint for compatibility
     @app.route('/api/chat', methods=['POST'])
     def api_chat():
-        """Legacy chat endpoint - returns full response at once"""
         global stop_task_flag
         stop_task_flag = False
         data = request.json

@@ -30,12 +30,12 @@ def magenta(text): return f"{Fore.MAGENTA}{text}{Style.RESET_ALL}"
 def print_about():
     """Print about information"""
     about_text = f"""
-{green('ZynoxAI v3.7.11')} - AI-Powered File & Folder Creation Tool
+{green('ZynoxAI v4.8.15')} - AI-Powered helpful locally executable behavior tools
 {magenta('Author:')} Buge Studio | {magenta('License:')} MIT
 {magenta('GitHub:')} https://github.com/BugeStudioTeam/Zynox
 
 {magenta('AI Providers:')} GPT, Gemini, Grok, DeepSeek
-{magenta('Features:')} Memory, Smart Install, Telegram Bot
+{magenta('Features:')} Memory, Smart Install, web, Telegram Bot
 {magenta('Platforms:')} Termux, Linux, macOS, Windows (WSL)
 """
     print(about_text)

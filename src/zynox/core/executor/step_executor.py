@@ -1,9 +1,10 @@
-"""Step-by-step task executor with streaming output"""
+"""Step-by-step task executor with streaming output and duplicate detection"""
 
 import json
 import re
 import sys
 import time
+import threading
 from typing import Callable, Optional
 from ...utils.colors import green, red, yellow, cyan, magenta
 
@@ -16,6 +17,8 @@ class StepExecutor:
         self.step_number = 0
         self.history = []
         self.max_steps = 30
+        self.last_actions = []
+        self.completed_tasks = set()
     
     def emit(self, text: str, color: str = "white"):
         """Emit output through callback or print"""
@@ -114,6 +117,8 @@ class StepExecutor:
             content = action.get("content", "")
             if path:
                 success = self.zynox.file_manager.create_file(path, content, base_path)
+                task_key = f"file:{path}"
+                self.completed_tasks.add(task_key)
                 return f"File created: {path}", success
             return "No path specified", False
         
@@ -121,6 +126,8 @@ class StepExecutor:
             path = action.get("path")
             if path:
                 success = self.zynox.file_manager.create_folder(path, base_path)
+                task_key = f"folder:{path}"
+                self.completed_tasks.add(task_key)
                 return f"Folder created: {path}", success
             return "No path specified", False
         
@@ -131,6 +138,42 @@ class StepExecutor:
             return f"Unknown action type: {action_type}", False
         
         return "No action executed", False
+    
+    def is_repeating(self, action: dict) -> bool:
+        """Check if we're stuck in a loop repeating the same action"""
+        if not action:
+            return False
+        
+        action_type = action.get("type", "")
+        if action_type == "create_folder":
+            signature = f"{action_type}:{action.get('path', '')}"
+        elif action_type == "create_file":
+            signature = f"{action_type}:{action.get('path', '')}"
+        else:
+            signature = f"{action_type}"
+        
+        # Check if this action was already completed
+        if action_type == "create_folder":
+            task_key = f"folder:{action.get('path', '')}"
+            if task_key in self.completed_tasks:
+                self.emit(f"⚠ Task '{action.get('path', '')}' already completed, skipping", "yellow")
+                return True
+        
+        if action_type == "create_file":
+            task_key = f"file:{action.get('path', '')}"
+            if task_key in self.completed_tasks:
+                self.emit(f"⚠ File '{action.get('path', '')}' already created, skipping", "yellow")
+                return True
+        
+        self.last_actions.append(signature)
+        if len(self.last_actions) > 5:
+            self.last_actions.pop(0)
+        
+        if len(self.last_actions) >= 3 and all(x == signature for x in self.last_actions[-3:]):
+            self.emit(f"⚠ Detected loop: repeating '{signature}'", "yellow")
+            return True
+        
+        return False
     
     def call_ai(self, prompt: str) -> Optional[str]:
         """Call AI and get response"""
@@ -146,13 +189,11 @@ class StepExecutor:
         if not response:
             return None
         
-        # Try to find COMPLETE first
         if "complete" in response.lower():
             match = re.search(r'"message":\s*"([^"]+)"', response)
             message = match.group(1) if match else "Task completed"
             return {"type": "complete", "message": message}
         
-        # Try to extract JSON with action
         patterns = [
             r'\{[^{}]*"type"\s*:\s*"[^"]+"[^{}]*\}',
             r'\{\s*"type"\s*:\s*"[^"]+",\s*"[^"]+"\s*:\s*"[^"]*"\s*\}',
@@ -169,7 +210,6 @@ class StepExecutor:
                 except:
                     pass
         
-        # Try direct JSON parse
         try:
             action = json.loads(response)
             if "type" in action:
@@ -183,23 +223,23 @@ class StepExecutor:
         """Run task with step-by-step execution"""
         self.step_number = 0
         self.history = []
+        self.last_actions = []
+        self.completed_tasks = set()
         
         self.emit("\n" + "="*60, "cyan")
         self.emit("ZynoxAI - Step-by-Step Execution Mode", "magenta")
         self.emit("="*60, "cyan")
         self.emit(f"\nTask: {user_input}\n", "white")
         
-        # Get initial context
         file_list = self.zynox.file_manager.list_files(base_path)
         
-        # Initial prompt
         from ..prompt.templates import build_initial_prompt
         prompt = build_initial_prompt(user_input, file_list)
         
         step_result = ""
+        consecutive_failures = 0
         
         while self.step_number < self.max_steps:
-            # Call AI
             self.emit(f"\n[AI Thinking...]", "yellow")
             response = self.call_ai(prompt)
             
@@ -207,23 +247,29 @@ class StepExecutor:
                 self.emit("Failed to get AI response", "red")
                 return False
             
-            # Parse action
             action = self.parse_action(response)
             if not action:
                 self.emit(f"Failed to parse AI response: {response[:200]}", "red")
-                action = {"type": "complete", "message": "Task ended"}
+                consecutive_failures += 1
+                if consecutive_failures >= 3:
+                    self.emit("Too many parse failures, ending task", "yellow")
+                    return True
+                continue
+            else:
+                consecutive_failures = 0
             
-            # Check for complete
             if action.get("type") == "complete":
                 self.emit(f"\n✓ {action.get('message', 'Task completed')}", "green")
                 return True
             
-            # Execute action
+            if self.is_repeating(action):
+                self.emit("\n✓ Detected task completion, ending execution", "green")
+                return True
+            
             self.emit_step(action)
             result, success = self.execute_action(action, base_path)
             self.emit_result(result, success)
             
-            # Store history
             self.history.append({
                 "step": self.step_number,
                 "action": action,
@@ -231,13 +277,14 @@ class StepExecutor:
                 "success": success
             })
             
-            # Build next prompt with result
             from ..prompt.templates import build_step_prompt
             step_result = f"Action: {json.dumps(action)}\nResult: {'SUCCESS' if success else 'FAILED'}\nOutput: {result[:1000]}"
             prompt = build_step_prompt(user_input, step_result, "", self.step_number)
             
-            # Small delay to prevent rapid looping
+            if self.step_number >= 10:
+                prompt += "\n\nYou have performed many steps. If the task is complete, output COMPLETE."
+            
             time.sleep(0.1)
         
         self.emit(f"\n⚠ Max steps ({self.max_steps}) reached. Task may not be complete.", "yellow")
-        return False
+        return True

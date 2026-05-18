@@ -13,7 +13,12 @@ def load_rules() -> str:
         return """# ZynoxAI Execution Rules
 Execute ONE action at a time. After each action, wait for result.
 Output ONLY valid JSON with one action.
-Complete when task is done."""
+Complete when task is done.
+
+IMPORTANT: When you have created all requested files/folders, output COMPLETE.
+Do NOT repeat the same action multiple times.
+Do NOT keep creating folders after they already exist.
+"""
 
 def build_step_prompt(user_input: str, step_result: str, context: str, step_number: int) -> str:
     """Build prompt for step-by-step execution"""
@@ -34,8 +39,24 @@ Previous Action Result:
 
 ## Instructions
 Based on the previous result, decide the NEXT SINGLE action.
-Output ONLY ONE JSON action. Do NOT output multiple actions.
-When the task is completely done, output COMPLETE.
+Output ONLY ONE JSON action.
+
+VALID JSON FORMATS (MUST include required fields):
+- Create folder: {{"type": "create_folder", "path": "folder_name"}}
+- Create file: {{"type": "create_file", "path": "file_name", "content": "file_content"}}
+- Execute command: {{"type": "command", "command": "command_string"}}
+- Complete: {{"type": "complete", "message": "completion_message"}}
+
+EXAMPLES:
+- Create folder: {{"type": "create_folder", "path": "my_folder"}}
+- Create file: {{"type": "create_file", "path": "my_folder/hello.txt", "content": "Hello World"}}
+- Complete: {{"type": "complete", "message": "All items created"}}
+
+CRITICAL:
+- For create_folder, you MUST include "path" field
+- For create_file, you MUST include "path" and "content" fields
+- Do NOT omit required fields
+- Do NOT output empty or malformed JSON
 
 Action:"""
 
@@ -57,6 +78,26 @@ This is the first step. No previous actions.
 ## Instructions
 Analyze the request and decide the FIRST action.
 Output ONLY ONE JSON action.
-Remember to check if files exist before reading them.
+
+VALID JSON FORMATS:
+- Create folder: {{"type": "create_folder", "path": "folder_name"}}
+- Create file: {{"type": "create_file", "path": "file_name", "content": "file_content"}}
+- Execute command: {{"type": "command", "command": "command_string"}}
+- Complete: {{"type": "complete", "message": "completion_message"}}
+
+EXAMPLES:
+For "create a folder called my_project":
+{{"type": "create_folder", "path": "my_project"}}
+
+For "create a python file called hello.py with print('Hello')":
+{{"type": "create_file", "path": "hello.py", "content": "print('Hello')\n"}}
+
+For "create a zip file with python files":
+First step: {{"type": "command", "command": "find . -name '*.py' -type f"}}
+
+CRITICAL:
+- create_folder MUST have "path" field
+- create_file MUST have "path" and "content" fields
+- Do NOT omit required fields
 
 Action:"""
