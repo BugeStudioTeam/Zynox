@@ -39,7 +39,7 @@
 6. After creating a file/folder, remember that it exists
 7. Do NOT recreate files/folders that already exist
 
-## Example Flow for "创建一个文件夹 一个 zip 和一个 txt"
+## Example Flow for "create a folder, a zip and a txt"
 Step 1: {"type": "create_folder", "path": "my_folder"}
 Step 2: {"type": "create_file", "path": "my_folder/example.txt", "content": "This is a text file"}
 Step 3: {"type": "command", "command": "cd my_folder && zip archive.zip example.txt"}

@@ -1,4 +1,4 @@
-"""Telegram bot integration"""
+"""Telegram bot integration with network fix"""
 
 import os
 import json
@@ -8,15 +8,20 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from ..config import TELEGRAM_CONFIG_FILE
 from ..utils.colors import green, yellow
+from ..core.file.manager import FileManager
+
+# Create file manager instance
+file_manager = FileManager()
 
 class TelegramBotHandler:
-    """Telegram Bot Handler - Runs in main thread"""
+    """Telegram Bot Handler with network fixes"""
     
     def __init__(self, zynox_instance, token):
         self.zynox = zynox_instance
         self.token = token
         self.application = None
         self.authorized_users = set()
+        self.file_manager = FileManager()
         self.load_config()
     
     def load_config(self):
@@ -149,7 +154,8 @@ Just send any request like:
             await update.message.reply_text("❌ Unauthorized")
             return
         
-        files = self.zynox.list_files(".")
+        # Use file_manager.list_files instead
+        files = self.file_manager.list_files(".")
         await update.message.reply_text(f"📁 *Current Directory:*\n```\n{files[:3000]}\n```", parse_mode='Markdown')
     
     async def pwd_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -195,7 +201,8 @@ Just send any request like:
                 self.zynox.memory.add_message("user", user_input)
                 self.zynox.task_complete = False
                 
-                file_list = self.zynox.list_files(".")
+                # Use file_manager.list_files instead
+                file_list = self.file_manager.list_files(".")
                 prompt = self.zynox.create_prompt(user_input, "", file_list)
                 response = self.zynox.call_api(self.zynox.current_provider, prompt)
                 
@@ -223,9 +230,22 @@ Just send any request like:
             await update.effective_message.reply_text("❌ An error occurred. Please try again.")
     
     def run(self):
-        """Run the bot"""
-        self.application = Application.builder().token(self.token).build()
+        """Run the bot with network fixes"""
+        from telegram.request import HTTPXRequest
         
+        # Create request with custom SSL settings
+        request = HTTPXRequest(
+            connection_pool_size=10,
+            connect_timeout=30.0,
+            read_timeout=30.0,
+            write_timeout=30.0,
+            pool_timeout=30.0,
+        )
+        
+        # Create application with custom request
+        self.application = Application.builder().token(self.token).request(request).build()
+        
+        # Add handlers
         self.application.add_handler(CommandHandler("start", self.start_command))
         self.application.add_handler(CommandHandler("help", self.help_command))
         self.application.add_handler(CommandHandler("status", self.status_command))
@@ -239,5 +259,11 @@ Just send any request like:
         self.application.add_error_handler(self.error_handler)
         
         print(green("[Telegram Bot Started. Press Ctrl+C to stop]"))
-        self.application.run_polling(allowed_updates=Update.ALL_TYPES)
+        
+        # Run with custom network settings
+        self.application.run_polling(
+            allowed_updates=Update.ALL_TYPES,
+            drop_pending_updates=True,
+            bootstrap_retries=0
+        )
         return True
