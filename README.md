@@ -2,7 +2,7 @@
   <img src="https://raw.githubusercontent.com/BugeStudioTeam/Zynox/refs/heads/main/images/icon.png" alt="ZynoxAI Icon" width="120"/>
 </p>
 
-# 🚀 ZynoxAI - AI-Powered Automation Tool
+# 🚀 ZynoxAI -- AI Powered Automation Tool
 
 <div align="center">
 
