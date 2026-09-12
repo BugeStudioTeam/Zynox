@@ -6,10 +6,13 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-3.6.8-blue.svg)
-![Python](https://img.shields.io/badge/python-3.7+-green.svg)
-![License](https://img.shields.io/badge/license-MIT-orange.svg)
-![Platform](https://img.shields.io/badge/platform-Termux%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)
+  <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Linux/linux3.svg">
+  <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Android/android2.svg">
+  <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Windows/windows2.svg">
+  <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Python/python3.svg">
+  <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Github/github3.svg">
+  <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/LicenceMIT/licencemit2.svg">
+
 
 **Create files and folders using natural language with GPT, Gemini, Grok, and DeepSeek AI**
 
