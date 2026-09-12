@@ -20,6 +20,7 @@ from zynox.cli import ZynoxAI
 from zynox.config import Config
 from zynox.memory.session import SessionManager
 from zynox.core.file.manager import FileManager
+from zynox.__version__ import __version__, __author__, __license__
 
 # Get directories
 WEB_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -82,6 +83,23 @@ def create_app():
     app = Flask(__name__, static_folder=None)
     app.config['SECRET_KEY'] = 'zynoxai-secret'
     
+    # ============ HTML with dynamic version injection ============
+    def render_index():
+        """Read index.html and inject version info"""
+        index_path = os.path.join(WEB_DIR, 'index.html')
+        try:
+            with open(index_path, 'r', encoding='utf-8') as f:
+                html = f.read()
+            
+            # Replace version placeholders
+            html = html.replace('{{VERSION}}', __version__)
+            html = html.replace('{{AUTHOR}}', __author__)
+            html = html.replace('{{LICENSE}}', __license__)
+            
+            return Response(html, mimetype='text/html')
+        except Exception as e:
+            return f"Error loading index.html: {e}", 500
+    
     # Serve static files
     @app.route('/static/<path:filename>')
     def serve_static(filename):
@@ -101,19 +119,19 @@ def create_app():
     
     @app.route('/')
     def index():
-        return send_from_directory(WEB_DIR, 'index.html')
+        return render_index()
     
     @app.route('/dashboard')
     def dashboard():
-        return send_from_directory(WEB_DIR, 'index.html')
+        return render_index()
     
     @app.route('/chat')
     def chat():
-        return send_from_directory(WEB_DIR, 'index.html')
+        return render_index()
     
     @app.route('/settings')
     def settings():
-        return send_from_directory(WEB_DIR, 'index.html')
+        return render_index()
     
     @app.route('/api/pwd')
     def api_pwd():
@@ -149,7 +167,9 @@ def create_app():
             'provider': zynox.current_provider,
             'environment': zynox.environment,
             'package_manager': zynox.package_manager,
-            'version': '3.6.8'
+            'version': __version__,
+            'author': __author__,
+            'license': __license__
         })
     
     @app.route('/api/stop', methods=['POST'])
@@ -344,7 +364,6 @@ def create_app():
                 })
                 print(f"[Uploaded: {safe_name} ({file_size} bytes)]")
 
-        # If files were uploaded and no message, auto-generate a task message
         if not user_msg and uploaded_files_info:
             file_names = ', '.join(f['name'] for f in uploaded_files_info)
             user_msg = f"Files uploaded: {file_names}. Please analyze these files."
@@ -436,7 +455,6 @@ def create_app():
         global stop_task_flag
         stop_task_flag = False
         
-        # Handle both FormData and JSON
         if request.content_type and 'multipart/form-data' in request.content_type:
             user_msg = request.form.get('message', '')
             uploaded_files = request.files.getlist('files')
@@ -445,7 +463,6 @@ def create_app():
             user_msg = data.get('message', '')
             uploaded_files = []
         
-        # Save uploaded files
         create_dir = Config.get_create_dir()
         os.makedirs(create_dir, exist_ok=True)
         for uploaded_file in uploaded_files:
@@ -518,6 +535,7 @@ def run_web_server(host='127.0.0.1', port=5000, debug=False):
     """Run web server"""
     app = create_app()
     print(f"\n[Web Server Started]")
+    print(f"[ZynoxAI v{__version__} by {__author__}]")
     print(f"[Access at: http://{host}:{port}]")
     print(f"[Press Ctrl+C to stop]\n")
     app.run(host=host, port=port, debug=debug, threaded=True)

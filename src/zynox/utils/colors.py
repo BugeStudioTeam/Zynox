@@ -1,6 +1,7 @@
 """Color output utilities"""
 
 from colorama import init, Fore, Style
+from ..__version__ import __version__, __author__, __license__
 
 init(autoreset=True)
 
@@ -16,7 +17,7 @@ def print_logo():
 {Fore.CYAN}║{Fore.YELLOW}   ╚══════╝   ╚═╝   ╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝{Fore.CYAN}                ║
 {Fore.CYAN}╠═══════════════════════════════════════════════════════════════╣
 {Fore.CYAN}║{Fore.GREEN}         AI-Powered File & Folder Creation Tool{Fore.CYAN}                ║
-{Fore.CYAN}║{Fore.MAGENTA}      ChatGPT • Gemini • Grok • DeepSeek • Telegram{Fore.CYAN}            ║
+{Fore.CYAN}║{Fore.MAGENTA}     ChatGPT • Gemini • Grok • DeepSeek • Telegram{Fore.CYAN}             ║
 {Fore.CYAN}╚═══════════════════════════════════════════════════════════════╝{Style.RESET_ALL}
 """
     print(logo)
@@ -30,12 +31,12 @@ def magenta(text): return f"{Fore.MAGENTA}{text}{Style.RESET_ALL}"
 def print_about():
     """Print about information"""
     about_text = f"""
-{green('ZynoxAI v4.8.15')} - AI-Powered helpful locally executable behavior tools
-{magenta('Author:')} Buge Studio | {magenta('License:')} MIT
+{green(f'ZynoxAI v{__version__}')} - AI-Powered File & Folder Creation Tool
+{magenta('Author:')} {__author__} | {magenta('License:')} {__license__}
 {magenta('GitHub:')} https://github.com/BugeStudioTeam/Zynox
 
 {magenta('AI Providers:')} GPT, Gemini, Grok, DeepSeek
-{magenta('Features:')} Memory, Smart Install, web, Telegram Bot
+{magenta('Features:')} Memory, Smart Install, Telegram Bot
 {magenta('Platforms:')} Termux, Linux, macOS, Windows (WSL)
 """
     print(about_text)

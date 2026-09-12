@@ -7,6 +7,8 @@ import time
 import threading
 from typing import Callable, Optional
 from ...utils.colors import green, red, yellow, cyan, magenta
+from ...__version__ import __version__
+
 
 class StepExecutor:
     """Execute tasks step by step with streaming output"""
@@ -152,7 +154,6 @@ class StepExecutor:
         else:
             signature = f"{action_type}"
         
-        # Check if this action was already completed
         if action_type == "create_folder":
             task_key = f"folder:{action.get('path', '')}"
             if task_key in self.completed_tasks:
@@ -227,7 +228,7 @@ class StepExecutor:
         self.completed_tasks = set()
         
         self.emit("\n" + "="*60, "cyan")
-        self.emit("ZynoxAI - Step-by-Step Execution Mode", "magenta")
+        self.emit(f"ZynoxAI v{__version__} - Step-by-Step Execution Mode", "magenta")
         self.emit("="*60, "cyan")
         self.emit(f"\nTask: {user_input}\n", "white")
         

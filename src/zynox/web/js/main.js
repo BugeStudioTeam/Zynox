@@ -11,6 +11,27 @@ let isStreaming = false;
 let currentAbortController = null;
 let attachedFiles = [];
 let selectedProvider = 'openai';
+let appVersion = '---';
+
+// ============ Load App Info from API ============
+async function loadAppInfo() {
+    try {
+        const res = await fetch(`${API_BASE}/api/status`);
+        const data = await res.json();
+        appVersion = data.version || '---';
+        updateVersionInfo();
+    } catch(e) {
+        console.error('Failed to load app info:', e);
+    }
+}
+
+function updateVersionInfo() {
+    // Update terminal first line
+    const terminalLines = document.querySelectorAll('#terminal-body .terminal-line');
+    if (terminalLines.length > 0) {
+        terminalLines[0].textContent = `ZynoxAI Terminal v${appVersion}`;
+    }
+}
 
 // ============ i18n Translations ============
 const TRANSLATIONS = {
@@ -229,7 +250,6 @@ function selectProvider(value, label, itemEl) {
     document.getElementById('providerSelectContainer').classList.remove('open');
 }
 
-// Close all dropdowns when clicking outside
 document.addEventListener('click', function(event) {
     if (!event.target.closest('.md3-dropdown-container')) {
         document.querySelectorAll('.md3-dropdown-container').forEach(c => c.classList.remove('open'));
@@ -431,7 +451,6 @@ async function loadSettings() {
         const res = await fetch(`${API_BASE}/api/config`);
         const data = await res.json();
 
-        // Update provider custom select
         const provider = data.default_provider || 'openai';
         selectedProvider = provider;
         const providerLabels = { openai: 'OpenAI', gemini: 'Gemini', grok: 'Grok', deepseek: 'DeepSeek' };
@@ -444,10 +463,8 @@ async function loadSettings() {
             }
         });
 
-        // Update model input
         document.getElementById('model-input').value = data.default_model || '';
 
-        // Update API keys
         const container = document.getElementById('api-keys-container');
         const providers = ['openai', 'gemini', 'grok', 'deepseek'];
         container.innerHTML = providers.map((p) => {
@@ -797,3 +814,4 @@ function addMessage(role, content) {
 // ============ Init ============
 loadDashboard();
 loadStatus();
+loadAppInfo();

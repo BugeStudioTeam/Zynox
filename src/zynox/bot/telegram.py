@@ -9,9 +9,11 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from ..config import TELEGRAM_CONFIG_FILE
 from ..utils.colors import green, yellow
 from ..core.file.manager import FileManager
+from ..__version__ import __version__, __author__, __license__
 
 # Create file manager instance
 file_manager = FileManager()
+
 
 class TelegramBotHandler:
     """Telegram Bot Handler with network fixes"""
@@ -46,10 +48,11 @@ class TelegramBotHandler:
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /start command"""
-        welcome_msg = """
-🤖 *ZynoxAI Bot*
+        welcome_msg = f"""
+🤖 *ZynoxAI Bot v{__version__}*
 
 AI-powered file and folder creation tool.
+By {__author__} | {__license__} License
 
 *Commands:*
 /start - Show this
@@ -72,8 +75,8 @@ Just send any request like:
     
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /help command"""
-        help_msg = """
-*ZynoxAI Bot Commands:*
+        help_msg = f"""
+*ZynoxAI Bot v{__version__} Commands:*
 
 /new - New conversation session
 /clear - Clear current memory
@@ -96,7 +99,9 @@ Just send any request like:
         
         status_msg = f"""
 *Bot Status:*
-🤖 Bot: Running
+🤖 Bot: Running (v{__version__})
+👤 Author: {__author__}
+📄 License: {__license__}
 🔄 Provider: {self.zynox.current_provider}
 💾 Session: {self.zynox.memory.current_session['session_id'][:20]}...
 📝 Messages: {len(self.zynox.memory.current_session['messages'])}
@@ -154,7 +159,6 @@ Just send any request like:
             await update.message.reply_text("❌ Unauthorized")
             return
         
-        # Use file_manager.list_files instead
         files = self.file_manager.list_files(".")
         await update.message.reply_text(f"📁 *Current Directory:*\n```\n{files[:3000]}\n```", parse_mode='Markdown')
     
@@ -201,7 +205,6 @@ Just send any request like:
                 self.zynox.memory.add_message("user", user_input)
                 self.zynox.task_complete = False
                 
-                # Use file_manager.list_files instead
                 file_list = self.file_manager.list_files(".")
                 prompt = self.zynox.create_prompt(user_input, "", file_list)
                 response = self.zynox.call_api(self.zynox.current_provider, prompt)
@@ -233,7 +236,6 @@ Just send any request like:
         """Run the bot with network fixes"""
         from telegram.request import HTTPXRequest
         
-        # Create request with custom SSL settings
         request = HTTPXRequest(
             connection_pool_size=10,
             connect_timeout=30.0,
@@ -242,10 +244,8 @@ Just send any request like:
             pool_timeout=30.0,
         )
         
-        # Create application with custom request
         self.application = Application.builder().token(self.token).request(request).build()
         
-        # Add handlers
         self.application.add_handler(CommandHandler("start", self.start_command))
         self.application.add_handler(CommandHandler("help", self.help_command))
         self.application.add_handler(CommandHandler("status", self.status_command))
@@ -258,9 +258,8 @@ Just send any request like:
         self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
         self.application.add_error_handler(self.error_handler)
         
-        print(green("[Telegram Bot Started. Press Ctrl+C to stop]"))
+        print(green(f"[Telegram Bot v{__version__} Started. Press Ctrl+C to stop]"))
         
-        # Run with custom network settings
         self.application.run_polling(
             allowed_updates=Update.ALL_TYPES,
             drop_pending_updates=True,

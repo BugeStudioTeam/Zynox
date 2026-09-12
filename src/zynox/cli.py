@@ -9,6 +9,7 @@ from pathlib import Path
 
 from .config import Config
 from .constants import API_ENDPOINTS
+from .__version__ import __version__, __author__, __license__
 from .utils.colors import print_logo, print_about, green, red, yellow, cyan, magenta
 from .utils.helpers import detect_environment, get_package_manager
 from .memory.session import SessionManager
@@ -163,17 +164,15 @@ JSON:"""
         return True
     
     def run(self, user_input: str, provider: str = None, model: str = None, base_path: str = ".") -> bool:
-        """Main execution - original mode"""
+        """Main execution"""
         if not user_input:
             return False
         
         self.memory.add_message("user", user_input)
         self.task_complete = False
         
-        # Show where files will be created
         print(cyan(f"[Files will be created in: {Config.get_create_dir()}]"))
         
-        # Check for file search patterns
         search_pattern = re.search(r'find\s+[\'"]?([^\'"]+\.(?:html|css|js|py|json|yml|yaml|txt|md))[\'"]?', user_input, re.IGNORECASE)
         
         context = ""
@@ -186,7 +185,6 @@ JSON:"""
                     context = file_content
                     print(green(f"✓ Using '{filename}' as reference\n"))
         
-        # Build and execute
         target_provider = provider or self.current_provider
         file_list = self.file_manager.list_files(base_path)
         prompt = self.create_prompt(user_input, context, file_list)
@@ -225,9 +223,12 @@ JSON:"""
 def main():
     """Main entry point"""
     parser = argparse.ArgumentParser(
-        description="ZynoxAI - AI-powered file/folder creation tool",
+        description=f"ZynoxAI v{__version__} - AI-powered file/folder creation tool",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
+        epilog=f"""
+ZynoxAI v{__version__} by {__author__}
+License: {__license__}
+
 Examples:
   zynox --set-key openai --key sk-xxx
   zynox --set-key gemini --key AIzaSyxxx
@@ -244,52 +245,33 @@ Examples:
   zynox --clear-created
   zynox --about
   zynox --telegram-bot YOUR_TOKEN
-  zynox --web                    # Start web server on port 5000
-  zynox --step "create a zip file with python files"  # Step-by-step execution
-
-# Execute Linux commands
-  zynox "list all files"
-  zynox "show disk usage"
-  zynox "display current directory"
+  zynox --web
+  zynox --step "create a zip file with python files"
 
 Note: All created files are saved in ~/ZynoxAI/output/workspace/
         """
     )
     
-    # About command
     parser.add_argument("--about", action="store_true", help="Show about information")
-    
-    # Memory commands
     parser.add_argument("--new-session", action="store_true", help="Start new conversation")
     parser.add_argument("--list-sessions", action="store_true", help="List all sessions")
     parser.add_argument("--load-session", metavar="ID", help="Load a session")
     parser.add_argument("--delete-session", metavar="ID", help="Delete a session")
     parser.add_argument("--delete-all-sessions", action="store_true", help="Delete all sessions")
     parser.add_argument("--clear-memory", action="store_true", help="Clear current memory")
-    
-    # File management commands
     parser.add_argument("--list-created", action="store_true", help="List all created files")
     parser.add_argument("--clear-created", action="store_true", help="Clear all created files")
-    
-    # Config commands
     parser.add_argument("--set-key", metavar="PROVIDER", help="Set API key (openai/gemini/grok/deepseek)")
     parser.add_argument("--key", help="API key value")
     parser.add_argument("--set-default", metavar="PROVIDER", help="Set default provider")
     parser.add_argument("--show-config", action="store_true", help="Show configuration")
     parser.add_argument("--list-models", action="store_true", help="List models")
-    
-    # Telegram bot
     parser.add_argument("--telegram-bot", metavar="TOKEN", help="Start Telegram bot")
-    
-    # Web server
     parser.add_argument("--web", action="store_true", help="Start web server")
     parser.add_argument("--host", default="0.0.0.0", help="Web server host (default: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=5000, help="Web server port (default: 5000)")
-    
-    # Step-by-step execution
-    parser.add_argument("--step", action="store_true", help="Step-by-step execution mode (recommended for complex tasks)")
-    
-    # Execution options
+    parser.add_argument("--step", action="store_true", help="Step-by-step execution mode")
+    parser.add_argument("--version", action="version", version=f"ZynoxAI v{__version__}")
     parser.add_argument("input", nargs="?", help="Your request")
     parser.add_argument("-p", "--provider", choices=["openai", "gemini", "grok", "deepseek"], help="AI provider")
     parser.add_argument("-m", "--model", help="Specific model")
@@ -297,13 +279,11 @@ Note: All created files are saved in ~/ZynoxAI/output/workspace/
     
     args = parser.parse_args()
     
-    # Handle about command
     if args.about:
         print_logo()
         print_about()
         sys.exit(0)
     
-    # Handle web server
     if args.web:
         try:
             from .web.app import run_web_server
@@ -318,7 +298,6 @@ Note: All created files are saved in ~/ZynoxAI/output/workspace/
             sys.exit(1)
         sys.exit(0)
     
-    # Show logo only when no arguments
     if len(sys.argv) == 1:
         print_logo()
     
@@ -327,7 +306,6 @@ Note: All created files are saved in ~/ZynoxAI/output/workspace/
     session = SessionManager()
     file_manager = FileManager()
     
-    # Handle Telegram bot
     if args.telegram_bot:
         bot = TelegramBotHandler(zynox, args.telegram_bot)
         print(green("[Telegram Bot running. Press Ctrl+C to stop]"))
@@ -337,7 +315,6 @@ Note: All created files are saved in ~/ZynoxAI/output/workspace/
             print(yellow("[Bot stopped]"))
         sys.exit(0)
     
-    # Handle file management commands
     if args.list_created:
         print(file_manager.list_created_files())
         sys.exit(0)
@@ -345,7 +322,6 @@ Note: All created files are saved in ~/ZynoxAI/output/workspace/
         file_manager.clear_created_files()
         sys.exit(0)
     
-    # Handle memory commands
     if args.new_session:
         session.new_session()
         sys.exit(0)
@@ -381,7 +357,6 @@ Note: All created files are saved in ~/ZynoxAI/output/workspace/
         print(green("[Memory cleared]"))
         sys.exit(0)
     
-    # Handle config commands
     if args.set_key:
         if not args.key:
             print(red("[Need --key]"))
@@ -400,6 +375,7 @@ Note: All created files are saved in ~/ZynoxAI/output/workspace/
                 print(f"  - {m}")
         sys.exit(0)
     if args.show_config:
+        print(f"ZynoxAI v{__version__}")
         print(f"Default Provider: {config.get_default_provider()}")
         print(f"Default Model: {config.get_default_model() or 'Not set'}")
         print(f"API Keys: {', '.join(config.data.get('api_keys', {}).keys())}")
@@ -408,12 +384,10 @@ Note: All created files are saved in ~/ZynoxAI/output/workspace/
         print(f"Workspace Directory: {Config.get_create_dir()}")
         sys.exit(0)
     
-    # Execute main command
     if not args.input:
         parser.print_help()
         sys.exit(1)
     
-    # Choose execution mode
     if args.step:
         print(cyan("\n[Step-by-Step Mode Enabled]"))
         success = zynox.run_step_by_step(args.input, args.provider, args.model, args.dir)
