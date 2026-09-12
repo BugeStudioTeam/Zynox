@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
+    <title>ZynoxAI</title>
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="stylesheet" href="/styles/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header / Hero -->
+        <header class="hero">
+            <img src="icon.png" alt="ZynoxAI" class="hero-logo">
+            <h1>ZynoxAI</h1>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="m3-tabs">
+            <button class="m3-tab active" data-page="dashboard">
+                <span class="material-symbols-outlined">dashboard</span>
+                <span data-i18n="dashboard_text">Dashboard</span>
+            </button>
+            <button class="m3-tab" data-page="chat">
+                <span class="material-symbols-outlined">chat</span>
+                <span data-i18n="chat_text">Chat</span>
+            </button>
+            <button class="m3-tab" data-page="settings">
+                <span class="material-symbols-outlined">settings</span>
+                <span data-i18n="settings_text">Settings</span>
+            </button>
+        </nav>
+
+        <!-- Dashboard Page -->
+        <div id="dashboard-page" class="page active">
+            <div class="m3-group">
+                <div class="card corner-top">
+                    <div class="software-header">
+                        <div class="software-title">
+                            <span class="material-symbols-outlined app-icon-symbol">info</span>
+                            <h3 data-i18n="status">Status</h3>
+                        </div>
+                    </div>
+                    <div class="stat-grid">
+                        <div class="stat-item">
+                            <div class="stat-label" data-i18n="status_label">Status</div>
+                            <div class="stat-value" id="stat-status">---</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label" data-i18n="provider">Provider</div>
+                            <div class="stat-value" id="stat-provider">-</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label" data-i18n="environment">Environment</div>
+                            <div class="stat-value" id="stat-env">-</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label" data-i18n="package_manager">Package Manager</div>
+                            <div class="stat-value" id="stat-pm">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card corner-bottom">
+                    <div class="software-header">
+                        <div class="software-title">
+                            <span class="material-symbols-outlined app-icon-symbol">history</span>
+                            <h3 data-i18n="sessions">Saved Sessions</h3>
+                        </div>
+                        <div class="action-row">
+                            <button class="btn btn-filled" onclick="newSession()">
+                                <span class="material-symbols-outlined">add</span>
+                                <span data-i18n="new">New</span>
+                            </button>
+                            <button class="btn btn-outlined" onclick="clearMemory()">
+                                <span class="material-symbols-outlined">delete_sweep</span>
+                                <span data-i18n="clear">Clear</span>
+                            </button>
+                            <button class="btn btn-text" onclick="loadSessions()">
+                                <span class="material-symbols-outlined">refresh</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="sessions-container" class="item-list">Loading...</div>
+                </div>
+            </div>
+
+            <div class="m3-group">
+                <div class="card corner-single">
+                    <div class="software-header">
+                        <div class="software-title">
+                            <span class="material-symbols-outlined app-icon-symbol">folder</span>
+                            <h3 data-i18n="created_files">Created Files</h3>
+                        </div>
+                        <button class="btn btn-outlined" onclick="downloadAllFiles()">
+                            <span class="material-symbols-outlined">download</span>
+                            <span data-i18n="download_all">Download All</span>
+                        </button>
+                    </div>
+                    <div id="created-files-container" class="item-list">Loading...</div>
+                </div>
+            </div>
+
+            <div class="m3-group">
+                <div class="card corner-single">
+                    <div class="software-header">
+                        <div class="software-title">
+                            <span class="material-symbols-outlined app-icon-symbol">terminal</span>
+                            <h3 data-i18n="terminal">Terminal</h3>
+                        </div>
+                    </div>
+                    <div class="terminal">
+                        <div class="terminal-body" id="terminal-body">
+                            <div class="terminal-line">ZynoxAI Terminal</div>
+                            <div class="terminal-line" data-i18n="terminal_hint">Type commands below (cd, ls, pwd, etc.)</div>
+                            <div class="terminal-line">---</div>
+                        </div>
+                        <div class="terminal-input-line">
+                            <span class="terminal-prompt">$</span>
+                            <input type="text" class="terminal-input" id="terminal-input" placeholder="cd .., ls -la, pwd...">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Page -->
+        <div id="chat-page" class="page">
+            <div class="chat-container">
+                <div class="chat-messages-container">
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="message ai">
+                            <div class="message-content" data-i18n="chat_welcome">
+                                <strong>ZynoxAI ready.</strong><br><br>
+                                Examples:<br>
+                                • "create a python file called hello.py with print('Hello')"<br>
+                                • "find abc.txt and read it"<br>
+                                • "list all files"
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <div class="attachment-preview" id="attachment-preview"></div>
+                    <div class="input-wrapper">
+                        <button class="attach-btn" id="attach-btn" onclick="document.getElementById('file-input').click()" title="Attach files">
+                            <span class="material-symbols-outlined">add</span>
+                        </button>
+                        <input type="file" id="file-input" multiple style="display:none" onchange="handleFilesSelected(event)">
+                        <textarea class="chat-input" id="chat-input" placeholder="Describe what you want..." rows="1" data-i18n-placeholder="chat_placeholder"></textarea>
+                        <button class="send-btn" id="send-btn" onclick="sendMessage()">
+                            <span class="material-symbols-outlined">arrow_upward</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Page -->
+        <div id="settings-page" class="page">
+            <h2 class="section-title">
+                <span class="material-symbols-outlined">settings</span>
+                <span data-i18n="settings_title">Settings</span>
+            </h2>
+
+            <!-- AI Provider -->
+            <div class="m3-group">
+                <div class="card corner-top">
+                    <div class="software-header">
+                        <div class="software-title">
+                            <span class="material-symbols-outlined app-icon-symbol">smart_toy</span>
+                            <h3 data-i18n="ai_provider">AI Provider</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="card corner-middle">
+                    <div class="setting-row">
+                        <label class="setting-label" data-i18n="default_provider">Default Provider</label>
+                        <div class="md3-select-container" id="providerSelectContainer">
+                            <div class="md3-select-trigger" onclick="toggleSelect('providerSelectContainer')">
+                                <span class="md3-select-value" id="selectedProviderText">OpenAI</span>
+                                <span class="material-symbols-outlined md3-select-icon">arrow_drop_down</span>
+                            </div>
+                            <div class="md3-select-menu">
+                                <div class="md3-select-item selected" data-value="openai" onclick="selectProvider('openai', 'OpenAI', this)">
+                                    <span>OpenAI</span>
+                                    <span class="material-symbols-outlined check-icon">check</span>
+                                </div>
+                                <div class="md3-select-item" data-value="gemini" onclick="selectProvider('gemini', 'Gemini', this)">
+                                    <span>Gemini</span>
+                                    <span class="material-symbols-outlined check-icon">check</span>
+                                </div>
+                                <div class="md3-select-item" data-value="grok" onclick="selectProvider('grok', 'Grok', this)">
+                                    <span>Grok</span>
+                                    <span class="material-symbols-outlined check-icon">check</span>
+                                </div>
+                                <div class="md3-select-item" data-value="deepseek" onclick="selectProvider('deepseek', 'DeepSeek', this)">
+                                    <span>DeepSeek</span>
+                                    <span class="material-symbols-outlined check-icon">check</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card corner-middle">
+                    <div class="setting-row">
+                        <label class="setting-label" data-i18n="default_model">Default Model</label>
+                        <div class="md3-textfield">
+                            <input type="text" id="model-input" class="md3-textfield-input" placeholder=" ">
+                            <label class="md3-textfield-label" for="model-input" data-i18n="model_hint">Model name</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="card corner-bottom">
+                    <div class="action-row" style="margin-top:0;">
+                        <button class="btn btn-filled" onclick="saveSettings()">
+                            <span class="material-symbols-outlined">save</span>
+                            <span data-i18n="save">Save</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API Keys -->
+            <div class="m3-group">
+                <div class="card corner-top">
+                    <div class="software-header">
+                        <div class="software-title">
+                            <span class="material-symbols-outlined app-icon-symbol">key</span>
+                            <h3 data-i18n="api_keys">API Keys</h3>
+                        </div>
+                    </div>
+                </div>
+                <div id="api-keys-container" class="api-keys-list"></div>
+            </div>
+
+            <!-- About -->
+            <div class="m3-group">
+                <div class="card corner-top">
+                    <div class="software-header">
+                        <div class="software-title">
+                            <span class="material-symbols-outlined app-icon-symbol">info</span>
+                            <h3 data-i18n="about">About</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="card corner-middle">
+                    <div class="about-row"><span data-i18n="version">Version</span><span>3.6.8</span></div>
+                </div>
+                <div class="card corner-middle">
+                    <div class="about-row"><span data-i18n="author">Author</span><span>Buge Studio</span></div>
+                </div>
+                <div class="card corner-middle">
+                    <div class="about-row"><span data-i18n="license">License</span><span>MIT</span></div>
+                </div>
+                <div class="card corner-bottom">
+                    <div class="about-row">
+                        <span>GitHub</span>
+                        <a href="https://github.com/BugeStudioTeam/Zynox" target="_blank" class="link">repo</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="footer-content">
+            <div class="copyright">© 2026 Buge Studio</div>
+            <div class="footer-controls">
+                <div class="md3-dropdown-container" id="langDropdownContainer">
+                    <div class="md3-dropdown-trigger" onclick="toggleDropdown('langDropdownContainer')">
+                        <div class="md3-dropdown-info">
+                            <span class="md3-dropdown-label" data-i18n="language">Language</span>
+                            <span class="md3-dropdown-value" id="selectedLangText">English</span>
+                        </div>
+                        <span class="material-symbols-outlined md3-dropdown-icon">arrow_drop_down</span>
+                    </div>
+                    <div class="md3-dropdown-menu">
+                        <div class="md3-menu-item selected" onclick="selectLanguage('en', this)">
+                            <span>English</span>
+                            <span class="material-symbols-outlined check-icon">check</span>
+                        </div>
+                        <div class="md3-menu-item" onclick="selectLanguage('zh', this)">
+                            <span>中文</span>
+                            <span class="material-symbols-outlined check-icon">check</span>
+                        </div>
+                        <div class="md3-menu-item" onclick="selectLanguage('de', this)">
+                            <span>Deutsch</span>
+                            <span class="material-symbols-outlined check-icon">check</span>
+                        </div>
+                        <div class="md3-menu-item" onclick="selectLanguage('ru', this)">
+                            <span>Русский</span>
+                            <span class="material-symbols-outlined check-icon">check</span>
+                        </div>
+                        <div class="md3-menu-item" onclick="selectLanguage('ar', this)">
+                            <span>العربية</span>
+                            <span class="material-symbols-outlined check-icon">check</span>
+                        </div>
+                        <div class="md3-menu-item" onclick="selectLanguage('fr', this)">
+                            <span>Français</span>
+                            <span class="material-symbols-outlined check-icon">check</span>
+                        </div>
+                        <div class="md3-menu-item" onclick="selectLanguage('pt', this)">
+                            <span>Português</span>
+                            <span class="material-symbols-outlined check-icon">check</span>
+                        </div>
+                        <div class="md3-menu-item" onclick="selectLanguage('pt-BR', this)">
+                            <span>Português (Brasil)</span>
+                            <span class="material-symbols-outlined check-icon">check</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/js/main.js"></script>
+</body>
+</html>
