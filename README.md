@@ -14,7 +14,7 @@
   <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/LicenceMIT/licencemit2.svg">
 
 
-**Create files and folders using natural language with GPT, Gemini, Grok, and DeepSeek AI**
+**Create files and folders using natural language with AI**
 
 [Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Usage Guide](#-usage-guide) • [Examples](#-examples) • [Telegram Bot](#-telegram-bot)
 
