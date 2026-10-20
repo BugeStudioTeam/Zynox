@@ -152,7 +152,7 @@ chmod +x ~/ZynoxAI/zynox.py
 ### Step 4: Verify Installation
 
 ```bash
-# Should show the ZYNOX logo
+# Should show the Zynox logo
 zynox
 
 # Should show help menu
