@@ -237,7 +237,7 @@ Example config.json:
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 Basic Usage
 
@@ -286,7 +286,7 @@ zynox -d /sdcard/Documents "create notes.txt"
 
 ---
 
-## 📚 Usage Guide
+## Usage Guide
 
 Command Structure
 
@@ -352,7 +352,7 @@ Go to your browser and visit: http://127.0.0.1:5000/
 
 ---
 
-## 💡 Examples
+## Examples
 
 Web Development Projects
 
@@ -409,7 +409,7 @@ zynox "create a zip file with all python files"
 
 ---
 
-## 📖 Commands Reference
+## Commands Reference
 
 Configuration Commands
 
@@ -485,7 +485,7 @@ zynox -p openai -d ./api "create a REST API with Flask"
 
 ---
 
-## 💬 Telegram Bot
+## Telegram Bot
 
 What is the Telegram Bot?
 
@@ -558,7 +558,7 @@ Security
 
 ---
 
-## 🔧 Smart Installation
+## Smart Installation
 
 Automatic Package Detection
 
@@ -601,7 +601,7 @@ If automatic installation fails, ZynoxAI provides manual instructions:
 
 ---
 
-## 🧠 Memory & Sessions
+## Memory & Sessions
 
 How Memory Works
 
@@ -649,7 +649,7 @@ Sessions are stored in ~/.zynoxai/memories/ as JSON files. Each session contains
 
 ---
 
-## 🔍 Troubleshooting
+## Troubleshooting
 
 Common Issues and Solutions
 
@@ -756,7 +756,7 @@ python ~/ZynoxAI/zynox.py "test" 2>&1
 
 ---
 
-## 🔑 API Keys
+## API Keys
 
 Where to Get API Keys
 
@@ -774,18 +774,9 @@ Setting Up API Keys
 4. Copy the key (starts with sk- typically for OpenAI/DeepSeek)
 5. Set it in ZynoxAI: zynox --set-key PROVIDER --key YOUR_KEY
 
-Security Best Practices
-
-· ✅ Store keys only in local config file
-· ✅ Never commit config.json to git
-· ✅ Use environment variables for CI/CD
-· ✅ Rotate keys periodically
-· ❌ Don't share your keys publicly
-· ❌ Don't hardcode keys in scripts
-
 ---
 
-## 🤝 Contributing
+## Contributing
 
 How to Contribute
 
@@ -836,13 +827,13 @@ Feature Ideas
 
 ---
 
-📄 License
+## License
 
-MIT License
+**MIT License**
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 · OpenAI for GPT models
 · Google for Gemini models
