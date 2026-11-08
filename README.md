@@ -22,7 +22,7 @@
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [What is ZynoxAI?](#-what-is-zynoxai)
 - [Features](#-features)
