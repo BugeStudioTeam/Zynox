@@ -89,7 +89,7 @@ ZynoxAI is a command-line tool that leverages artificial intelligence to create 
 
 ---
 
-## 🧠 Supported AI Providers
+## Supported AI Providers
 
 | Provider | Models | Best For | Token Limit |
 |----------|--------|----------|-------------|
