@@ -43,7 +43,7 @@
 
 ---
 
-## 🤖 What is ZynoxAI?
+## What is ZynoxAI?
 
 ZynoxAI is a command-line tool that leverages artificial intelligence to create files and folders based on natural language descriptions. Instead of manually typing `mkdir`, `touch`, and writing file contents, you can simply describe what you want in plain English, and ZynoxAI will:
 
