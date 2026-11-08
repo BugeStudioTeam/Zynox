@@ -64,7 +64,7 @@ ZynoxAI is a command-line tool that leverages artificial intelligence to create 
 
 ---
 
-## ✨ Features
+## Features
 
 ### Core Features
 - 🤖 **Multi-AI Support** - Switch between OpenAI GPT, Google Gemini, Grok (xAI), and DeepSeek
