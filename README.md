@@ -67,25 +67,25 @@ ZynoxAI is a command-line tool that leverages artificial intelligence to create 
 ## Features
 
 ### Core Features
-- 🤖 **Multi-AI Support** - Switch between OpenAI GPT, Google Gemini, Grok (xAI), and DeepSeek
-- 🌐 **Natural Language** - Describe what you want in plain English
-- 📁 **Batch Operations** - Create multiple files/folders in one command
-- 🎨 **Nested Structures** - Automatically creates parent directories
-- 🎯 **Smart File Detection** - AI understands file types and extensions
-- 📝 **Code Generation** - Creates meaningful code content automatically
-- 🎨 **Color Output** - Beautiful terminal interface with colored logs
-- 💾 **Persistent Config** - Saves API keys and preferences locally
-- 🧠 **Memory System** - Remembers previous conversations and context
-- 💬 **Telegram Bot** - Control ZynoxAI remotely via Telegram
-- 🔧 **Smart Installation** - Auto-detects and installs missing packages
+- **Multi-AI Support** - Switch between OpenAI GPT, Google Gemini, Grok (xAI), and DeepSeek
+- **Natural Language** - Describe what you want in plain English
+- **Batch Operations** - Create multiple files/folders in one command
+- **Nested Structures** - Automatically creates parent directories
+- **Smart File Detection** - AI understands file types and extensions
+- **Code Generation** - Creates meaningful code content automatically
+- **Color Output** - Beautiful terminal interface with colored logs
+- **Persistent Config** - Saves API keys and preferences locally
+- **Memory System** - Remembers previous conversations and context
+- **Telegram Bot** - Control ZynoxAI remotely via Telegram
+- **Smart Installation** - Auto-detects and installs missing packages
 
 ### Technical Features
-- ✅ **Zero Dependencies** - Only requires Python and `requests`
-- 🔄 **Retry Logic** - Automatic retry on network failures
-- ⏱️ **Configurable Timeout** - Handles slow connections gracefully
-- 🔐 **Secure** - API keys stored locally, never transmitted elsewhere
-- 📱 **Termux Optimized** - Works perfectly on Android devices
-- 🌍 **Cross-Platform** - Works on Termux, Linux, macOS, Windows
+- **Zero Dependencies** - Only requires Python and `requests`
+- **Retry Logic** - Automatic retry on network failures
+- **Configurable Timeout** - Handles slow connections gracefully
+- **Secure** - API keys stored locally, never transmitted elsewhere
+- **Termux Optimized** - Works perfectly on Android devices
+- **Cross-Platform** - Works on Termux, Linux, macOS, Windows
 
 ---
 
