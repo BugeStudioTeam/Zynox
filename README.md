@@ -100,7 +100,7 @@ ZynoxAI is a command-line tool that leverages artificial intelligence to create 
 
 ---
 
-## 📦 Installation
+## Installation
 
 ### Prerequisites
 - Python 3.7 or higher
