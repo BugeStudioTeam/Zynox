@@ -164,7 +164,7 @@ zynox --about
 
 ---
 
-## 🔧 Configuration
+## Configuration
 
 Setting API Keys
 
